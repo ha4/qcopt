@@ -1,5 +1,4 @@
-module co_arm() {
-    rotate([0,180,0])
+module co_arm0() {
     translate([-54.945,-102.27,0])
     import(file="quad_arm_repaired.stl");
     //#cylinder(d=6.5,h=5,$fn=40);
@@ -35,7 +34,7 @@ module co_5040(b=[0,0,.3,.3])
     }
 
 fsz=230; // frame size
-*for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])co_arm();
+*for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
 //cc_center();
 ///translate([0,0,-2.0-18.0])
 //co_bottom();
@@ -123,3 +122,31 @@ module cc_bottom() difference() {
     
 }
 //let(n=8)for(i=[0:n]) translate([0,0,-i*3])j2(i*90/n);
+
+module cros(wall,sz,h)
+    for(a=[-45,90,45]) rotate([0,0,a])
+    translate(-[sz,wall,0]/2)cube([sz,wall,h]);
+
+
+
+module co_arm(dmot=24, h=4, sz=125, bsz=41, frn=5, wall=2) {
+    bas1=sz-bsz;
+    // motor
+    cylinder(d=dmot,h=h,$fn=60);
+    // center mnt
+    translate([0,-bas1,0]) cylinder(d=7.5,h=18,$fn=40);
+    for(i=[-.5,.5])
+        translate([i*15,-14.5-bas1,0])
+            cylinder(d=7.5,h=6,$fn=30);
+    // arm enforce
+    for(y=[ 0,
+            -14.35,
+            -14.35-12.25,
+            -14.35-12.25-11.25,
+            -14.35-12.25-11.25-11,
+            -14.35-12.25-11.25-11-11.8,])
+        translate([0,-dmot/2+.4+y,0]) cros(wall,dmot,h);
+}
+
+co_arm0();
+#co_arm();
