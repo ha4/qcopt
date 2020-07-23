@@ -33,10 +33,10 @@ module co_5040(b=[0,0,.3,.3])
         cylinder(d=5*25.4,h=2,center=true);
     }
 
-fsz=230; // frame size
-*for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
-//cc_center();
-///translate([0,0,-2.0-18.0])
+fsz=250; // frame size
+for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
+co_center();
+//translate([0,0,-2.0-18.0])
 //co_bottom();
 *for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
     rotate([0,0,-45-90]) co_x2204();
@@ -57,18 +57,24 @@ module arm_mnt(sel=1,height=5) {
             cylinder(d=3.5,h=height,$fn=30,center=true);
 }
 
-module belt_mnt(a,w=20,d=3) {
-    for(x=[-a,a]/2) translate([x,0,0]) hull()
-        for(y=[-w+d,w-d]/2) translate([0,y,0])
-            cylinder(d=d,h=5,$fn=30,center=true);
-}
+module rpath(x,y,z) hull()
+    if (x>=y)
+        for(i=[-x+y,x-y]/2) translate([i,0,0])
+        cylinder(d=y,h=z,$fn=30,center=true);
+    else
+        for(j=[-y+x,y-x]/2) translate([0,j,0])
+        cylinder(d=x,h=z,$fn=30,center=true);
+
+module belt_mnt(a,w=20,d=3,h=5)
+    for(x=[-a,a]/2) translate([x,0,0])
+        rpath(d,w,h);
 
 module sqr_hole(w,h,d=3.2,height=5)
     hull()
         for(x=[-w+d,w-d]/2,y=[-h+d,h-d]/2) translate([x,y,0])
             cylinder(d=d,h=height,$fn=30,center=true);
 
-module cc_center() difference() {
+module co_center() difference() {
     bevel1();
     // electronics
     let(m=30.5,g=[m,-m]/2)for(x=g,y=g) translate([x,y,0])
@@ -98,7 +104,7 @@ module bevel2() for(i=[0:5:90]) hull() {j2(i); j2(i+5); }
 module symm4() for(n=[0:1],m=[0:1]) 
     mirror([n,0,0]) mirror([0,m,0]) children();
 
-module cc_bottom() difference() {
+module co_bottom() difference() {
     union() {
         f2b();
         symm4() bevel2();
@@ -127,17 +133,30 @@ module cros(wall,sz,h)
     for(a=[-45,90,45]) rotate([0,0,a])
     translate(-[sz,wall,0]/2)cube([sz,wall,h]);
 
+function lenangle(length, diameter) = 360*length/diameter/3.1415926535;
+function rotpts(p1,p2)=atan2(p2.y-p1.y,p2.x-p1.x);
+   
+module ringsect(chord,r,wall,H) {
+    a=lenangle(chord,2*r);
+    translate([-r,0,0])
+    rotate_extrude(angle=a,$fn=200)
+        translate([r,0,0]) square([wall,H]);
+}
 
-
-module co_arm(dmot=24, h=4, sz=125, bsz=41, frn=5, wall=2) {
+module co_arm(sz=125, bsz=41, dmot=24, h=4, hm=6, htot=18, wall=2) {
+    frames=6;
+    dmnt=7.5;
     bas1=sz-bsz;
+    armcurvature=10;
+    armwidth=15;
+    armbase=bas1-dmnt/2-h/2;
     // motor
     cylinder(d=dmot,h=h,$fn=60);
-    // center mnt
-    translate([0,-bas1,0]) cylinder(d=7.5,h=18,$fn=40);
+    // arm mounts
+    translate([0,-bas1,0]) cylinder(d=dmnt,h=htot,$fn=40);
     for(i=[-.5,.5])
         translate([i*15,-14.5-bas1,0])
-            cylinder(d=7.5,h=6,$fn=30);
+            cylinder(d=dmnt,h=hm,$fn=30);
     // arm enforce
     for(y=[ 0,
             -14.35,
@@ -146,7 +165,14 @@ module co_arm(dmot=24, h=4, sz=125, bsz=41, frn=5, wall=2) {
             -14.35-12.25-11.25-11,
             -14.35-12.25-11.25-11-11.8,])
         translate([0,-dmot/2+.4+y,0]) cros(wall,dmot,h);
+    translate([-armwidth/2,-dmnt-armbase-.4,0])cube([armwidth,dmnt,hm]);
+    for(j=[0,1])mirror([j,0,0])
+    translate([-15/2-dmnt/2,-bas1-14.5,0])
+    rotate([0,0,-9.31]) {
+        ringsect(96,290,2,6);
+        ringsect(14.5,290,dmnt*.75,6);
+    }
 }
 
-co_arm0();
-#co_arm();
+//co_arm0();
+//co_arm();
