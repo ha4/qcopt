@@ -33,16 +33,9 @@ module co_5040(b=[0,0,.3,.3])
         cylinder(d=5*25.4,h=2,center=true);
     }
 
-fsz=250; // frame size
-for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
-co_center();
-//translate([0,0,-2.0-18.0])
-//co_bottom();
-*for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
-    rotate([0,0,-45-90]) co_x2204();
-    translate([0,0,22]) co_5040();
-}
-
+/*
+    center plate
+ */
 module f1(a=0) let(w=16,h=92)
     rotate([0,0,45]) translate([-(w+a)/2,-h/2,0]) cube([w+a,h,2]);
 module j1(i,r=95) let(a=r-r*cos(i), b=r-r*sin(i)) intersection()
@@ -92,6 +85,10 @@ module co_center() difference() {
     for(y=[-15.25,15.25]) translate([0,y,0]) sqr_hole(12.7,6.35);
 }
 
+/*
+    bottom plate
+ */
+
 module f2a(a=0) let(dx=8,L=50)
     translate([-a/2,0,0])rotate([0,0,45])
         translate([L-dx,0,0])cylinder(d=dx+a,h=2,$fn=70);
@@ -129,8 +126,12 @@ module co_bottom() difference() {
 }
 //let(n=8)for(i=[0:n]) translate([0,0,-i*3])j2(i*90/n);
 
+/*
+    motor arm
+ */
+
 module cros(wall,sz,h)
-    for(a=[-45,90,45]) rotate([0,0,a])
+    for(a=[-45,45]) rotate([0,0,a])
     translate(-[sz,wall,0]/2)cube([sz,wall,h]);
 
 function lenangle(length, diameter) = 360*length/diameter/3.1415926535;
@@ -143,36 +144,60 @@ module ringsect(chord,r,wall,H) {
         translate([r,0,0]) square([wall,H]);
 }
 
+module arm_mounts(d,h1,h2) {
+    w=15;
+    h3=14.5;
+    curv=290;
+    armbase=d/2+h1/2;
+    armwidth=15;
+    for(i=[-.5,.5])
+        translate([i*w,-h3,0]) cylinder(d=d,h=h1,$fn=30);
+    cylinder(d=d,h=h2,$fn=40);
+    translate([-armwidth/2,-d-armbase-.4,0])
+        cube([armwidth,d,h1]);
+    for(j=[0,1])mirror([j,0,0])
+    translate([-w/2-d/2,-h3,0]) rotate([0,0,-9.31])
+        #ringsect(h3,curv,d*.75,6);
+
+}
+
+module arm_frame(L,dmot,dmnt,wall,h) {
+    translate(-[wall/2,0,0])cube([wall,L,h]);
+    for(y=[ 0,
+            14.35,
+            14.35+12.25,
+            14.35+12.25+11.25,
+            14.35+12.25+11.25+11,
+            14.35+12.25+11.25+11+11.8,])
+        translate([0,y-.4,0]) cros(wall,dmot,h);
+    for(j=[0,1])mirror([j,0,0])
+    translate([-15/2-dmnt/2,-14.5,0])
+    rotate([0,0,-9.31])
+        ringsect(96,290,2,6);
+}
+
 module co_arm(sz=125, bsz=41, dmot=24, h=4, hm=6, htot=18, wall=2) {
     frames=6;
     dmnt=7.5;
-    bas1=sz-bsz;
-    armcurvature=10;
-    armwidth=15;
-    armbase=bas1-dmnt/2-h/2;
-    // motor
-    cylinder(d=dmot,h=h,$fn=60);
+    // motor plate
+    *cylinder(d=dmot,h=h,$fn=60);
     // arm mounts
-    translate([0,-bas1,0]) cylinder(d=dmnt,h=htot,$fn=40);
-    for(i=[-.5,.5])
-        translate([i*15,-14.5-bas1,0])
-            cylinder(d=dmnt,h=hm,$fn=30);
-    // arm enforce
-    for(y=[ 0,
-            -14.35,
-            -14.35-12.25,
-            -14.35-12.25-11.25,
-            -14.35-12.25-11.25-11,
-            -14.35-12.25-11.25-11-11.8,])
-        translate([0,-dmot/2+.4+y,0]) cros(wall,dmot,h);
-    translate([-armwidth/2,-dmnt-armbase-.4,0])cube([armwidth,dmnt,hm]);
-    for(j=[0,1])mirror([j,0,0])
-    translate([-15/2-dmnt/2,-bas1-14.5,0])
-    rotate([0,0,-9.31]) {
-        ringsect(96,290,2,6);
-        ringsect(14.5,290,dmnt*.75,6);
-    }
+    translate([0,-sz+bsz,0])
+        arm_mounts(dmnt,hm,htot);
+    translate([0,-dmot/2,0]) rotate([0,0,180])
+        arm_frame(sz-bsz-dmot/2,dmot,dmnt,wall,h);
 }
 
 //co_arm0();
-//co_arm();
+co_arm();
+
+fsz=250; // frame size
+*for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
+//co_center();
+//translate([0,0,-2.0-18.0])
+//co_bottom();
+*for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
+    rotate([0,0,-45-90]) co_x2204();
+    translate([0,0,22]) co_5040();
+}
+
