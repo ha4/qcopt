@@ -33,6 +33,9 @@ module co_5040(b=[0,0,.3,.3])
         cylinder(d=5*25.4,h=2,center=true);
     }
 
+module co_bat2200(w=[.8,.8,.8])
+    color(w) let(sz=[35,116,0]) translate(-sz/2)cube(sz+[0,0,30]);
+
 /*
     center plate
  */
@@ -165,7 +168,10 @@ module arm_mounts(d,h1,h2) {
         // bolts
         for(i=[-.5,.5])
         translate([i*w,-e3,0]) cylinder(d=d,h=h1,$fn=30);
+        if (h2>0)
         cylinder(d=d,h=h2,$fn=40);
+        else
+        translate([0,0,h2+h1]) cylinder(d=d,h=-h2,$fn=40);
         // holders
         translate([-mntwidth/2,armbase-d,0])
             cube([mntwidth,d,h1]);
@@ -173,7 +179,7 @@ module arm_mounts(d,h1,h2) {
             translate(p1) rotate([0,0,180-ab])
                 ringsect([d*.75,nb,h1],curv);
         }
-        arm_mnt(height=h2*3);
+        arm_mnt(height=abs(h2)*3);
     }
 }
 
@@ -181,22 +187,24 @@ module arm_frame(L,w1,wall,h,h2) {
     curv=290;
     mntwidth=17.65;
     p1=[mntwidth/2,L];
-    p2=[w1/2,-w1/2];
+    p2=[w1/2-.5,-w1/2+4];
     ab=rotpts(p1-p2);
     nb=norm(p1-p2);
     wx=w1/2;
 
     translate(-[wall/2,0,0])cube([wall,L,h]);
-    for(y=[ [0,0,wx],
-            [14.35,wx,wx-2],
-            [14.35+12.25,wx-2,wx-3],
+    for(y=[ [0,0,wx-.5],
+            [14.35,wx-.5,wx-2.5],
+            [14.35+12.25,wx-2.5,wx-3],
             [14.35+12.25+11.25,wx-3,wx-4],
-            [14.35+12.25+11.25+11,wx-4,wx-2],
-            [14.35+12.25+11.25+11+11.8,wx-2,wx-1]])
+            [14.35+12.25+11.25+11,wx-4,wx-3],
+            [14.35+12.25+11.25+11+11.8,wx-3,wx-2]])
         translate([0,y[0]-.4,0]) cros(wall,y[1],y[2],h);
     for(j=[0,1])mirror([j,0,0])
-    translate(p1) rotate([0,0,180-ab])
-        ringsect([wall,nb,h2],curv);
+    translate(p1) {
+        translate(p2-p1)rotate([0,90,9])translate([-h2/2,0,-wall])cylinder(d=h2,h=wall,$fn=30);
+        rotate([0,0,180-ab])ringsect([wall,nb,h2],curv);
+    }
 }
 
 module mot_mnt(d1=6.5,d2=3.2) {
@@ -225,16 +233,41 @@ module co_arm(sz=125, bsz=41, dmot=24, h=4, hm=6, htot=18, wall=2) {
             dmot,wall,h,hm);
 }
 
+module co_arm2(sz=125, bsz=41, dmot=27, h=4, hm=6, htot=18, wall=2) {
+    frames=6;
+    dmnt=7.5;
+    asz=sz-bsz;
+    // motor plate
+    difference() {
+        cylinder(d=dmot,h=h,$fn=60);
+        mot_mnt();
+    }
+    // arm mounts
+    translate([0,-asz,0])
+        arm_mounts(dmnt,hm,-htot);
+    translate([0,-dmot/2,0]) rotate([0,0,180])
+        arm_frame(asz-dmot/2-dmnt/2-1.5,
+            dmot,wall,hm,hm);
+}
+
 //co_arm0();
 //co_arm();
 
+module assembly() {
 fsz=250; // frame size
-for(a=[45,90+45,180+45,270+45]) rotate([0,0,a])translate([0,fsz/2,0])     rotate([0,180,0]) co_arm();
-//co_center();
-//translate([0,0,-2.0-18.0])
-//co_bottom();
+for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) rotate([0,180,0]) translate([0,0,18-6])co_arm2();
+    //co_arm();
+translate([0,0,-2.0-18.0])
+co_center();
+co_bottom();
+translate(-[0,0,18-6])
 for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
     rotate([0,0,-45-90]) co_x2204();
     translate([0,0,22]) co_5040();
 }
+translate([0,0,2])co_bat2200();
+}
 
+co_arm2();
+//co_bottom();
+//co_center();
