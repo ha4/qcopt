@@ -253,8 +253,38 @@ module co_arm2(sz=125, bsz=41, dmot=27, h=4, hm=6, htot=18, wall=2) {
 //co_arm0();
 //co_arm();
 
+module drillptrn(x=30.5,xs=36,ds=10,d=3.2,d0=7.5,h1=2,h2=15,pcb=1.5,tol=.2,clamp=false,$fn=40)
+{
+    g=[for(xx=[-.5,.5],yy=[-.5,.5]) [x*xx,x*yy]];
+    if(!clamp)
+    difference() {
+      union() { hull() for(c=g) translate(c) cylinder(d=d0,h=h1);
+      for(c=g) translate(c) cylinder(d=d0,h=h2); }
+      
+      for(c=g) translate(c) cylinder(d=d,h=h2*3,center=true);
+      for(a=[0:90:359])rotate([0,0,a])translate([xs/2,-d0/2,-1])
+          cube([d0,d0,h1*2]);
+      
+      for(a=[0:90:359])rotate([0,0,a])translate([xs/2,-d0/2,-1])
+          cube([d0,d0,h1*2]);
+      for(a=[0:90:359])rotate([0,0,a])translate([xs/2-ds,-d0/2,-1])
+          cube([ds/2,d0,h1*2]);
+      }
+    pos1=xs/2-ds+tol/2;
+    pos2=xs;
+    if (clamp)
+    rotate([90,0,0])
+    translate([pos2,-d0/2+tol/2,2]) {
+            cube([ds+d0/2-tol/2,d0-tol,h1*2]);
+        translate([0,0,-h1])
+            cube([ds/2-tol,d0-tol,h1*2-h1]);
+        translate([ds-tol/2,0,-h1-pcb])
+            cube([ds/2,d0-tol,h1*2-h1+pcb]);
+    }
+}
+
 module assembly() {
-fsz=250; // frame size
+fsz=200; // frame size
 for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) rotate([0,180,0]) translate([0,0,18-6])co_arm2();
     //co_arm();
 translate([0,0,-2.0-18.0])
@@ -268,6 +298,8 @@ for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
 translate([0,0,2])co_bat2200();
 }
 
-co_arm2();
+///assembly();
+drillptrn(clamp=false);
+//co_arm2();
 //co_bottom();
 //co_center();
