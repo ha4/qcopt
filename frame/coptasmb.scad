@@ -256,10 +256,13 @@ module co_arm2(sz=125, bsz=41, dmot=27, h=4, hm=6, htot=18, wall=2) {
 module drillptrn(x=30.5,xs=36,ds=10,d=3.2,d0=7.5,h1=2,h2=15,pcb=1.5,tol=.2,clamp=false,$fn=40)
 {
     g=[for(xx=[-.5,.5],yy=[-.5,.5]) [x*xx,x*yy]];
+    diag=x*sqrt(2);
     if(!clamp)
     difference() {
       union() { hull() for(c=g) translate(c) cylinder(d=d0,h=h1);
-      for(c=g) translate(c) cylinder(d=d0,h=h2); }
+      for(c=g) translate(c) cylinder(d=d0,h=h2); 
+      for(a=[0,90])rotate([0,0,45+a])translate(-[1,diag]/2)cube([1,diag,h2]);    
+      }
       
       for(c=g) translate(c) cylinder(d=d,h=h2*3,center=true);
       for(a=[0:90:359])rotate([0,0,a])translate([xs/2,-d0/2,-1])
