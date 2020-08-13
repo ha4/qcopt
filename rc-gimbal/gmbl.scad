@@ -1,9 +1,9 @@
 
-rkrparam0=[31,8,20,3.0];// size,spring,axle,scalefactor
+rkrparam0=[31,7,8,20,3.0];// 0size,1width,2spring,3axle,4scalefactor
 rkrparam=concat(rkrparam0,
-    [1, //pin lift
-    -rkrparam0[2]/(rkrparam0[3]+1), // near pin offset
-    rkrparam0[2]/(rkrparam0[3]-1)]); // far pin offset
+    [1, //5pin lift
+    -rkrparam0[3]/(rkrparam0[4]+1), // 6near pin offset
+    rkrparam0[3]/(rkrparam0[4]-1)]); // 7far pin offset
 
 module rotary6(tol=0,hh=6.5) let(flatspot=1.5)
 intersection() {
@@ -44,19 +44,19 @@ module center()
     module cylstick()
         translate([0,0,hs])
             rotate([-90,0,0])
-            cylinder(d1=do/2,d2=dbm,h=do/2+2,$fn=40);
+            cylinder(d1=do/2,d2=dbm,h=do/2+1,$fn=40);
 
     module mainparts() {
     hull() {
         cylinder(d=dm,h=hm,$fn=50);
-        translate([rkrparam[5],rkrparam[4]])
+        translate([rkrparam[6],rkrparam[5]])
             cylinder(d=dam,h=hm,$fn=30);
         rotate([0,0,ao])cylseg(d=do,h=hm);
     }
-    translate([rkrparam[6],rkrparam[4]])
+    translate([rkrparam[7],rkrparam[5]])
         cylinder(d=dam,h=hm,$fn=30);
     
-    hull() {for(t=[[0,0],[rkrparam[6],rkrparam[4]]])
+    hull() {for(t=[[0,0],[rkrparam[7],rkrparam[5]]])
         translate(t) cylinder(d=dam-da,h=hm);
     }
     cylstick();
@@ -66,14 +66,13 @@ module center()
     module baseplate()
     hull() { 
         cylinder(d=dm,h=hh,$fn=50);
-        translate([rkrparam[6],rkrparam[4]])
+        translate([rkrparam[7],rkrparam[5]])
             cylinder(d=dam,h=hh,$fn=30);
         rotate([0,0,ao])cylseg(d=do,h=hh);
-        linear_extrude(height=hh) projection()cylstick();
     }
     difference() {
         union() {mainparts(); baseplate();}
-        for(t=[[0,0],[rkrparam[6],rkrparam[4]],[rkrparam[5],rkrparam[4]]])
+        for(t=[[0,0],[rkrparam[7],rkrparam[5]],[rkrparam[6],rkrparam[5]]])
             translate(t) cylinder(d=da,h=hm*3,center=true,$fn=30);
         translate([0,0,6.51])rotate([0,0,90])rotary6(tol=0.2);
         translate([0,dm/2,hs])
@@ -83,20 +82,16 @@ module center()
 }
 
 
-module xmount()
-{
-}
-
 module xrocker(ssy=0)
 {
     da=2.0;
     dm=4.5;
     hm=3;
     hh=2;
-    wid=7;
+    wid=rkrparam[1];
     sz=rkrparam[0];
-    axis=rkrparam[2];
-    ssx=rkrparam[1];
+    axis=rkrparam[3];
+    ssx=rkrparam[2];
             ty=wid-dm/2-da/2;
             tx=(dm-da)/2;
     difference() {
@@ -124,6 +119,40 @@ module xrocker(ssy=0)
     }
 }
 
+module xmount()
+{
+    wall=2;
+    w=30;
+    ew=9;
+    h=10;
+    dep=21;
+    module clamp()
+        hull() {
+            ofs=3;zofs=wall*2;
+            xsz=3;
+            ysz=4;
+            translate([0,-ysz/2,0])cube([xsz,ysz,wall]);
+            translate([ofs,-ysz/2,zofs])cube([xsz,ysz,wall]);
+        }
+    module upper() {
+        translate([-h/2,-w/2-ew,dep-wall])cube([h,w+ew,wall]);
+        translate([h/2-4,-rkrparam[3]+rkrparam[2],0])
+        translate([0,0,dep])rotate([180,0,0])clamp();
+    }
+    module base() {
+        translate([-h/2,-w/2-ew,0])cube([h,w+ew,wall]);
+        translate([-h/2,w/2-.01,0])cube([h,wall,dep]);
+        translate([h/2-4,-rkrparam[3]+rkrparam[2],0]) clamp();
+    }
+    base();
+    #upper();
+    
+    //#translate([-h/2,-w/2-ew,0]) cube([h,w+2*ew,dep]);
+    
+}
+
+//xmount();
+
 module xcap()
 {
 }
@@ -150,30 +179,44 @@ color([0.2,.2,.2]) difference() {
     cylinder(d=3.2,h=15*2,center=true,$fn=50);
 }
 
-module assembly_stk()
+module assembly_stk(a2=0)
 {
-    translate([0,0,6]) {stick();
-    translate([0,0,35-15])stickcap();
+    translate([-6,0,0])
+        rotate([90,0,90])center();
+    translate([0,0,6]) {
+        stick();
+        translate([0,0,35-15])stickcap();
         }
     
     translate([-6-6.5,0,0])
-    rotate([0,90,0])axle(13);
-    translate([-6,0,0])
-    rotate([90,0,90])center();
-    translate([-6-3,rkrparam[5],rkrparam[4]])
+        rotate([0,90,0])axle(13);
+    translate([-6-3,rkrparam[6],rkrparam[5]])
         rotate([0,90,0])axle(15);
-    translate([-6-3,rkrparam[6],rkrparam[4]])
+    translate([-6-3,rkrparam[7],rkrparam[5]])
         rotate([0,90,0])axle(15);
+
+    
+    rotate([-a2,0,0])translate([-8.5,-rkrparam[3],0])
+    rotate([90,0,90])
+    rotate([0,0,-abs(a2/rkrparam[4])]) {
+        color("red")xrocker();
+        translate([0,0,-4])axle(22);
+        translate([rkrparam[2],-(rkrparam[1]-4.5/2)+rkrparam[5],0])
+            axle(13);
+    }
 }
+
+module assembly_x(a1=0) {
+    rotate([a1,0,0]) assembly_stk(a1);
+    translate([9,0,0]) rotate([0,-90,0])xmount();
+}
+
+//assembly_x();
 
 module rockertest()
 {
     a=30*sin($t*360);
-    rotate([a,0,0]) assembly_stk();
-    translate([-8.5,-rkrparam[2],0])
-    rotate([90,0,90])
-    rotate([0,0,-abs(a/rkrparam[3])])
-        color("red")xrocker();
+    assembly_x(a);
 }
 
 rockertest();
