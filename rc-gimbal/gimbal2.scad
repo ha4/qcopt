@@ -1,91 +1,106 @@
 
+wall=2;// thin elements wall
+dstick=3; // outer dsitck diameter
+daxle=2; // rotating pin diameter
+tol=0.2; // movable elements tolarance luft
+dmnt=9; // axis exit hub diameter
+// general axis prarm
+laxis=36;
+// central hub param
+dcros=7.5; // internal axis diameter
+hcros=19; // internal axis length
+wcros=5; // gimbal cross wheel
+// yaxis and cover param
+dcap=24; // cap diameter
+lcap=30; // cap axial lenght
+capcut=2; // ycap cur
+wsize=12; // stick window size
+
+
 let(a=$t*360,r=30,
     m=r*sin(a*2)*sqrt(2)/2,
     x=cos(a)-sin(a),y=sin(a)+cos(a))
 {
     rotate([x*m,0])ycap();
-    rotate([0,y*m])xcov();
-    rotate([0,0])rotate([x*m,y*m])
+    *rotate([0,y*m])xcov();
+    *rotate([x*m,y*m])
     { 
-        color([.6,.6,.6])cylinder(d=3,h=40,$fn=23);
+        color([.6,.6,.6])cylinder(d=dstick,h=40,$fn=23);
         cros();
     }
 }
 
+module z(offs) translate([0,0,offs]) children();
+module rx(angle) rotate([angle,0,0]) children();
+module ry(angle) rotate([0,angle,0]) children();
+module rz(angle) rotate([0,0,angle]) children();
+
 module cros() {
     for(j=[[90,0],[0,90]]) rotate(j)
-    cylinder(d=7.5,h=20,center=true,$fn=30);
-    rotate([90,0])
-    cylinder(d=20,h=5,$fn=40,center=true);
+    cylinder(d=dcros,h=hcros,center=true,$fn=30);
+    rotate([90,0]) intersection() {
+      cylinder(d=hcros,h=wcros,$fn=40,center=true);
+      sphere(d=hcros,$fn=66);
+    }
 }
 
 module ycap() {
-    wall=2;
-    omnt=26/2;
-    imnt=25/2-wall;
-    di=7.5;
-    dmnt=9;
-    cut=2;
+    omnt=lcap/2-wall;
+    imnt=dcap/2-wall;
+    idcap=dcap-wall*2;
+    ilcap=lcap-wall*2;
+    hub=laxis/2-omnt;
     module outer() intersection() {
-        rotate([0,90,0])
-            cylinder(d=25,h=30,center=true,$fn=50);
-        translate([0,0,-cut])
-            cube([30,25,25],center=true);
+        ry(90)cylinder(d=dcap,h=lcap,center=true,$fn=50);
+        z(-capcut) cube([lcap,dcap,dcap],center=true);
     }
     module inner() {
-        intersection() {
-            rotate([0,90,0])
-               cylinder(d=25-wall*2,h=30-wall*2,
-                    center=true,$fn=50);
-        translate([0,0,-cut])
-            cube([30,25,25-4],center=true);
-        }
-        translate([0,0,-25/2])cube([40,25,25],center=true);
-        hull() for(x=[-7,7]) translate([x,0,0])
-            cylinder(d=5.1,h=30,$fn=30);
+      intersection() {
+      ry(90)cylinder(d=idcap,h=ilcap,center=true,$fn=50);
+      z(-capcut) cube([lcap,dcap,idcap],center=true);
+      }
+      z(-dcap/2)cube([lcap+1,dcap+1,dcap],center=true);
+      hull() for(x=[-1,1]*wsize/2) translate([x,0,0])
+            cylinder(d=wcros+tol,h=dcap,$fn=30);
+      for(y=[90,270]) rx(y) z(imnt-wall) 
+        cylinder(d=dcros+tol*4,h=wall,$fn=30);
     }
+
     difference() { outer(); inner(); }
-    for(x=[90,270]) rotate([0,x,0]) translate([0,0,omnt]) 
-        cylinder(d=dmnt,h=5,$fn=30);
-    for(y=[90,270]) rotate([y,0,0]) translate([0,0,imnt]) 
-        cylinder(d=di,h=2,$fn=30);
+    for(x=[0,180]) rz(x) ry(90)z(omnt) hull() { 
+        cylinder(d=dmnt,h=hub,$fn=30);
+        translate(-[dcap+dmnt,0,0]/4)cylinder(d1=wall,d2=0,h=wall);
+    }
+    intersection() { outer(); 
+        for(y=[90,270]) rx(y) z(imnt) 
+        cylinder(d=dcros,h=wall,$fn=30);
+    }
 }
 
 module xcov() {
-    wall=2;
-    omnt=26/2;
-    imnt=25/2-wall;
-    di=7.5;
-    dmnt=9;
+    omnt=lcap/2-wall;
+    imnt=dcap/2-wall;
+    hub=laxis/2-omnt;
+
     module j1(th=wall)
-        rotate([-90,0,0])
-        translate([0,0,omnt]) 
-            cylinder(d=dmnt,h=th,$fn=30);
+      rx(-90) z(omnt) cylinder(d=dmnt,h=th,$fn=30);
     module j2()
-        translate([0,omnt*2+wall,-dmnt/.8-wall/.8]/2)
-        rotate([0,90,0])
-            cylinder(d=wall,center=true,h=dmnt,$fn=30);
+      translate([0,omnt*2+wall,-dmnt/.8-wall/.8]/2)
+      ry(90) cylinder(d=wall,center=true,h=dmnt,$fn=30);
     module j1i()
-        rotate([0,-90,0])
-        translate([0,0,imnt]) 
-            cylinder(d=di,h=wall,$fn=30);
+      ry(-90) z(imnt)  cylinder(d=dcros,h=wall,$fn=30);
     module j2i()
-        translate([-imnt*2-wall,0,-di]/2)
-        rotate([90,0,0])
-            cylinder(d=wall,center=true,h=di,$fn=30);
-    module j3(k=1)
-        translate(k==1?-[0,-omnt,omnt+dmnt]/2:-[omnt,0,omnt+dmnt]/2)
-        rotate(k==1?[0,90]:[90,0])
-            cylinder(d=wall,center=true,h=dmnt,$fn=30);
+      translate([-imnt*2-wall,0,-dcros]/2)
+      rx(90) cylinder(d=wall,center=true,h=dcros,$fn=30);
+    module j3(k=-90) rz(k) 
+      translate(-[omnt,0,omnt+dmnt]/2)
+      rx(90) cylinder(d=wall,center=true,h=dmnt,$fn=30);
 
-    for (y=[0,180]) hull() rotate([0,0,y]){ j1(); j2(); }
-    for (y=[0,180]) hull() rotate([0,0,y]){ j2(); j3(); }
+    for (y=[0,180]) hull() rz(y){ j1(); j2(); }
+    for (y=[0,180]) hull() rz(y){ j2(); j3(); }
 
-    for (y=[0,180]) hull() rotate([0,0,y]){ j1i();j2i();}
-    for (y=[0,180]) hull() rotate([0,0,y]){ j2i();j3(0); }
-    hull()
-        for (y=[0,180]) rotate([0,0,y]) {j3();j3(0);}
-    for(y=[0,180]) rotate([0,0,y]) j1(5);
-    for(y=[0,180]) rotate([0,0,y]) j1i();
-    
+    for (y=[0,180]) hull() rz(y){ j1i();j2i();}
+    for (y=[0,180]) hull() rz(y){ j2i();j3(0);}
+    hull() for (y=[0,180]) rz(y){ j3(); j3(0);}
+    for(y=[0,180]) rz(y) j1(hub);    
 }
