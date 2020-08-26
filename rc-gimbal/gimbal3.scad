@@ -6,6 +6,7 @@ module rx(angle) rotate([angle,0,0]) children();
 
 module mntplate()
 {
+    axial=14.5; // axle to top offset
     dbolt=2.2;// mount bolt drill
     mdim=45; // mount dimenstion
     xydim=52; // standings main dimension
@@ -20,13 +21,47 @@ module mntplate()
     bw=3;  // braker support wall
     bx=18; // braker-to-axis x-offset
     by=7;  // braker-to-axis y-offset
+    cw=3.5; // cap wall
+    cd=50;  // cap diameter
+    wh=28.5; // stick window height
+    ww=37.5; // stick window width
+    ww1=27; // window drum width
+    wh1=21; // window drum height
+    wr=15; // window drum radius
+    wdw=1; // drum window wall
+    wz=7;  // window depth
+    wa=28; // window angle
     module f1() { // base
         translate(-[xydim,xydim,wall*2]/2) cube([xydim,xydim,wall]);
         for(i=[0:90:359]) rz(i)
             translate([10,10,-wall]) cube([18.5,18.5,wall]);
     }
+    module rsqr(sz,r) let(x=sz.x/2-r,y=sz.y/2-r) hull() for(i=[-x,x],j=[-y,y])
+        translate([i,j]) circle(r=r,$fn=29);
+    module rramp(sz1,sz2,r,h) let(s=[sz2.x/sz1.x,sz2.y/sz1.y])
+        linear_extrude(convexity=5,height=h,scale=s)
+            rsqr(sz1,r);
     module f2() { // cover
-        cylinder(d=50,h=3.5);
+        cylinder(d=cd,h=cw);
+        intersection() {
+            cylinder(d=cd,h=cw*10,center=true);
+            z(cw)rx(180)
+                rramp([ww,wh]+[wall,wall]*2,[ww1,wh1]+[wall,wall]*2,2,wz);
+        }
+    }
+    module f2i() { // cover cutout
+        z(cw+.01)rx(180)
+        rramp([ww,wh],[ww1,wh1]+[wall/2,-wall/2],2,wz+.03);
+        z(-axial) ry(90)
+        cylinder(r=wr-wdw,h=2*ww,center=true,$fn=43);
+    }
+    module f2a() {
+        z(-axial)ry(90)difference() {
+            cylinder(r=wr,h=ww-wall,center=true,$fn=43);
+            cylinder(r=wr-wdw,h=ww*2,center=true,$fn=43);
+            cylinder(r=wr+wdw,h=ww1,center=true,$fn=43);
+            translate([wz-3.5+wr-axial,0,0])cube([wr*2,wr*2,ww+.1],center=true);
+        }
     }
     module f3() { // standing
         y=3;
@@ -68,7 +103,8 @@ module mntplate()
             for(x=[-.5,.5],y=[-.5,.5]) translate([x*mdim,y*mdim,-wall*5])
                 cylinder(d=dbolt,h=wall*7,$fn=13);
     }
-    f2();
+    z(-0.01)difference() { f2(); f2i(); }
+    f2a();
     for(i=[0:90:359]) rz(i) standmove() f3();
     rz(90) standmove() f4();
     rz(180) standmove() f5();
@@ -167,9 +203,9 @@ module stickB()
     }
 }
 
-//z(-14.5)stickA();
-//z(-14.5)stickB();
+z(-14.5)stickA();
+z(-14.5)stickB();
 
 mntplate();
-translate([0,52/2,0]) rx(90)sideplate();
-rz(90)translate([0,52/2,0]) rx(90)sideplate();
+//translate([0,52/2,0]) rx(90)sideplate();
+//rz(90)translate([0,52/2,0]) rx(90)sideplate();
