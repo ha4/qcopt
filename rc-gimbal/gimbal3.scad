@@ -89,7 +89,10 @@ module mntplate()
         translate([sx-.1,0,-.01]) cube([bz+.1,wall,zdim]);
         translate([bz+sx-bw,0,0]) cube([bw,by,zdim]);
         translate([xydim/2-bx,by,0]) difference() {
-            cylinder(d=4,h=bh,$fn=19);
+            union() let(ds=4) {
+                cylinder(d=ds,h=bh,$fn=19);
+                translate([-ds/2,-ds/2])cube([ds/3,ds,bh]);
+            }
             z(bh-5)cylinder(d=1.8,h=5+.1,$fn=13);
         }
     }
@@ -111,30 +114,48 @@ module mntplate()
     
 }
 
+module spring1() 
+color([.5,.5,.5]){
+    wall=0.5;
+    z(-wall) difference() {
+        union() {
+            translate(-[6,4.1]/2)cube([6,4,wall]);
+            translate(-[6,4+wall*2]/2)cube([6,wall,3]);
+            translate(-[4,4]/2)cube([4,22,wall]);
+            translate([0,18,wall/2])ry(90)
+                cylinder(d=wall*2,h=4,center=true,$fn=15);
+        }
+        cylinder(d=2.2,h=wall*4,center=true,$fn=19);
+    }
+}
+
 module sideplate()
 {
     wall1=1;
+    offs1=14.5;
     bol=[[-52/2+3.5,-wall-9.5],[52/2-3.5,-wall-13.5]];
     module f1() z(-wall) {
-        translate([-51/2,-17-2.5])cube([51,17,wall]);
-        translate([-20/2,-wall-.5]) cube([20,wall+.5,wall]);
-        translate([0,-14.5]) cylinder(d=8,h=7,$fn=31);
-        translate([0,-12.5])for(j=[-45,45])rz(j)
-        translate([-wall1/2,0])cube([wall1,12,7]);
+        translate([-51/2,-17-2.5])cube([51,17,wall]);// main
+        translate([-20/2,-wall-.5]) cube([20,wall+.5,wall]); // lock
+        translate([0,-offs1]) cylinder(d=8,h=7,$fn=31); // center
+        translate([0,-offs1+2])for(j=[-45,45])rz(j)  // stopps
+            translate([-wall1/2,0])cube([wall1,12,7]);
         // refs
         translate([-52/2+3.5,-wall-2.5]) cylinder(d=2,h=wall+1,$fn=21);
         translate([52/2-3.5,-wall-5.5]) cylinder(d=2,h=wall+1,$fn=21);      
         // bolts
         for(j=bol) translate(j) cylinder(d=7,h=wall,$fn=21);
     }
+    module f2() for(j=bol) translate(j) { // bolts
+        cylinder(d=2.2,h=wall*3,center=true,$fn=21);
+        z(-2-wall+1)cylinder(d=4.6,h=2.01,$fn=21);
+        z(-wall+1)cylinder(d1=4.6,d2=2.2,h=1,$fn=21);
+    }
+
     difference() {
         f1();
-        translate([0,-14.5]) cylinder(d=4,h=7*3,center=true,$fn=31);
-        for(j=bol) translate(j) {
-            cylinder(d=2.2,h=wall*3,center=true,$fn=21);
-            z(-2-wall+1)cylinder(d=4.6,h=2.01,$fn=21);
-            z(-wall+1)cylinder(d1=4.6,d2=2.2,h=1,$fn=21);
-        }
+        translate([0,-offs1]) cylinder(d=4,h=7*3,center=true,$fn=31);
+        f2();
     }
 }
 
@@ -182,14 +203,14 @@ module stickB()
     iw=4.5; // internal lug width
     msz=5; // bottom minimum size
     module f0() {
-         ry(90)cylinder(d=d1-2,h=asz,center=true,$fn=30);
-         ry(90)cylinder(d=d0,h=asz+2*lext,center=true,$fn=30);
+         ry(90)cylinder(d=d1-2,h=asz,center=true,$fn=30); // axis limiter
+         ry(90)cylinder(d=d0,h=asz+2*lext,center=true,$fn=30); // axis
    }
-    module f1() hull() {
+    module f1() hull() { // main body
         ry(90)cylinder(d=d1,h=asz-.5,center=true,$fn=30);
         z(ih/2-ha) cube([asz-2*iw,msz,ih],center=true);
     }
-    module f2() {
+    module f2() { // extracts
         z(ih-ha+ih)cube([asz-2*iw,d1+1,ih+ih],center=true);
         cylinder(d=d2,h=hsz*3,center=true,$fn=23);
         z(-ha+ih-d2h)cylinder(d=d2+2,h=d2h+.1,$fn=19);
@@ -203,9 +224,391 @@ module stickB()
     }
 }
 
-z(-14.5)stickA();
-z(-14.5)stickB();
+module ydrum()
+{
+    asz=42.5; // main axial length
+    aext=4;   // axial extend
+    dax1=4;   // support axis
+    dax2=6;   // pot axis
+    dax2b=1.5;// pot axis flat
+    dax0=1.5; // orthogonal axis
+    wall=2;   // inner wall
+    r0=15;    // outer radial size
+    r1=13;    // side radial size
+    h0=26.8;  // outer size
+    h1=40.5;  // drum size
+    zext=3;   // extra drum height
+    hint=2.5; // internal cut height
+    zint=20;  // internal cut width
+    ph=7.8;   // path cut height
+    pw=20;    // path cut width
+    pw1=pw+2; // biggest path cut
+    dmnt=8.5; // orthogonal axis size
+    rkr1=9;   // rocker stopper1
+    rkr2=4;   // rocker stopper2
+    module f0() let(z=asz/2+aext) ry(90) intersection() { // axial pot cut
+        cylinder(d=dax2,h=z,$fn=43);
+        translate([-dax2b,0,0])cube([dax2,dax2,z+z],center=true);
+    }
+    module f1() ry(90) {
+        cylinder(r=r0,h=h0,center=true,$fn=43);
+        cylinder(r=r1,h=h1,center=true,$fn=43);
+    }
+    module f2() ry(90) {
+        cylinder(r=r0-wall,h=h0-wall*2,center=true);
+        cylinder(r=r1-wall,h=h1-wall*2,center=true);
+        translate([r0,0,0])cube([r0*2,r0*2,h1+1],center=true);
+        translate([r0-hint,0,0])cube([r0*2,r0*2,zint],center=true);
+        ry(-90)linear_extrude(height=r0,scale=[pw1,1]) square([1,ph],center=true);
+        cube([r0*2,ph,pw],center=true);
+    }
+    module f2a() difference() { f1(); f2(); f0(); }
+    module f2b() z(-zext+.01)linear_extrude(height=zext)
+        projection(cut=true)z(-.01) f2a();
+    module f3() rx(90){ // orthogona axis lug
+        intersection() {
+            let(wall0=wall+.4)difference() {
+              for(m=[-r0,r0-wall0]) z(m) {
+                 cylinder(d=dmnt,h=wall0);
+                 translate([-dmnt/2,0])cube([dmnt,dmnt/2,wall0]);
+              }
+              cylinder(d=dax0,h=r0*3,center=true,$fn=13);
+            }
+            ry(90) cylinder(r=r0,h=h0,center=true,$fn=43);
+        }
+    }
+    module f4() ry(90) z(-h1/2+.01){ // support axis & stopper protection
+        let(dh=(asz-h1)/2+.15)
+        z(-dh)cylinder(d=dax1+2,h=dh,$fn=19);
+        z(-aext)cylinder(d=dax1,h=aext,$fn=19);
+        z(-aext+2)for(j=[-10,10])translate([0,j,0])
+            cylinder(d=3.1,h=aext-2,$fn=19);
+        z(0) intersection() {
+            cylinder(r=15.5,h=wall,$fn=67);
+            translate([0,-18/2])cube([31,18,wall]);
+        }
+    }
+    module f5() ry(90) z(h1/2-wall) { // pot axis
+        cylinder(d=dax2+wall*2,h=aext+wall,$fn=31);
+    }
+    module f6() ry(90) z(h1/2-wall) let(dr=1.5) { // pot axis locker
+        translate([dr/2,-rkr2,0]) hull() {
+            cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([dr,0,0])cylinder(d=dr,h=aext+wall,$fn=23);
+        }
+        translate([dr/2, rkr1,0]) hull() {
+            cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([dr,-dr/2,0])cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([dr,0,0])cylinder(d=dr,h=aext+wall,$fn=23);
+        }
+    }
 
-mntplate();
+    
+    f2a();
+    f2b();
+    f3();
+    f4();
+    difference() {
+        f5(); f0(); 
+        let(u=dax2+wall*3) translate([asz/2,-u/2,-zext/2]) cube([u,u,u]);
+    }
+    f6();
+}
+
+module xcap()
+{
+    wall=3.5;
+    sz=15; // general axis-bottom size
+    asz=42.5; // main axial length
+    aext=4;   // axial extend
+    a0sz=20.5; // ortho axis lenght
+    d0=3; // ortho axis
+    d0d=7; // lug diameter
+    d1=4; // support axis
+    d2=6; // pot axis
+    d2b=1.5;// pot axis flat
+    lug0=4; // lug szie
+    lug0a=15; // lug arm size
+    lug0b=12; // lug arm size
+    lug0z=3.5; // lug arm isosurface
+    lug0d=8.5; // lug arm height
+    lug1=4.5; // main axis lug depth
+    lug1h=8; // main axis lug height
+    lug1w=21; // main axis lug width
+    lug1a=8.5; // arm width
+    lug1d=7;   // arm height
+    rkr1=9;   // rocker stopper1
+    rkr2=4;   // rocker stopper2
+    module f0() let(z=asz/2+aext) rx(90) intersection() { // axial pot cut
+        cylinder(d=d2,h=z,$fn=43);
+        translate([0,d2b])cube([d2,d2,z+z],center=true);
+    }
+    module f00() ry(90) // orthogonal axial drill
+        cylinder(d=d0,h=a0sz+lug0*3,center=true,$fn=43);
+
+   module f1a() // orthogonal lug itself
+        ry(90) z(a0sz/2)cylinder(d=d0d,h=lug0,$fn=31);
+    module f1b() // orthogonal lug step1
+        translate([a0sz/2,-lug0b/2,-lug0z]) cube([lug0,lug0b,.1]);
+    module f1c()
+         translate([a0sz/2-2.0,-lug0a/2,-lug0d]) cube([lug0,lug0a,.1]);
+    module f1d()
+        translate([a0sz/2-2.5,0,-sz+wall/2])
+            rx(90) cylinder(d=wall,h=lug0a,center=true,$fn=39);
+    module f1() {
+        hull() { f1a(); f1b(); }
+        hull() { f1b(); f1c(); }
+        hull() { f1c(); f1d(); }
+    }
+    module f2()  { // lug
+       rx(90) z(-asz/2+.5) hull() let(k=lug1w-lug1h*2) for(j=[-k,k])
+           translate([j,0])cylinder(d=lug1h,h=lug1,$fn=31);
+       translate([-lug1a/2,asz/2-lug1-.5,-lug1d])
+            cube([lug1a,lug1,lug1d+lug1h/2+1]);
+    }
+    module f3() rx(90)  { // support axis
+       z(-asz/2)cylinder(d=d1+2,h=.5+.01);
+       z(-asz/2-aext)cylinder(d=d1,h=aext+.5,$fn=43);
+    }
+    module f4a() // arm start
+        translate([-lug1a/2,asz/2-lug1-.5,-lug1d]) cube([lug1a,lug1,2]);
+    module f4b()// arm start
+        translate([-lug1a/2,asz/2-1-lug1d,-sz]) cube([lug1a,1,wall]);
+    module f4() hull() {
+        f4a(); f4b();
+    }
+    module f5() let(r=4) difference() {
+        hull() {
+            f1d(); rz(180) f1d(); 
+            f4b(); rz(180) f4b();
+            }
+        for(i=[0,1],j=[0,1])
+        mirror([0,i,0])mirror([j,0,0])let(x=[lug1a/2+r,lug0a/2+r,0])
+            translate(x) z(-sz) hull() for(m=[[0,0],[0,r],[r,0]])
+                translate(m)cylinder(r=r,h=wall*3,center=true,$fn=39);
+    }
+    module f6() rx(90) z(asz/2-.5-lug0) let(dr=1.5) { // pot axis locker
+        translate([-rkr2,-dr/2]) hull() {
+            cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([dr/2,-dr,0])cylinder(d=dr,h=aext+wall,$fn=23);
+        }
+        translate([rkr1,-dr/2]) hull() {
+            cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([0,-dr/2])cylinder(d=dr,h=aext+wall,$fn=23);
+            translate([-dr/2,-dr])cylinder(d=dr,h=aext+wall,$fn=23);
+        }
+    }
+
+    difference() { union() {f1(); rz(180) f1();} f00(); }
+    f2(); difference() { rz(180) f2(); f0(); }
+    f3(); 
+    f4(); rz(180) f4();
+    f5();
+    f6();
+}
+
+module potplate()
+{
+    wall1=1;
+    offs1=14.5;
+    offs2=28.5;
+    lck=2.5;
+    h1=17;
+    h2=30.5;
+    w2=10;
+    bol=[[-52/2+3.5,-wall-9.5],[52/2-3.5,-wall-13.5]];
+    module f1() z(-wall) {
+        translate([-51/2,-17-lck])cube([51,17,wall]);// main
+        translate([-20/2,-wall-.5]) cube([20,wall+.5,wall]); // main lock
+        let(v=w2+2*(h2-h1)) hull() { // main extender for trimmer
+            translate([-w2/2,-h2-lck]) cube([w2,h2,wall]);
+            translate([-v/2,-17-lck]) cube([v,17,wall]);
+        }
+        // pot tube
+        translate([0,-offs1,-7+wall]) cylinder(d=12,h=7,$fn=23);
+         // trim brake
+        translate([0,-offs2,-wall+.1])
+            rz(90)ring(35,2*26+2*.2,2*26+2*1,wall,$fn=99);
+        // refs
+        translate([-52/2+3.5,-wall-2.5]) cylinder(d=2,h=wall+1,$fn=21);
+        translate([52/2-3.5,-wall-5.5]) cylinder(d=2,h=wall+1,$fn=21);      
+        // bolts
+        for(j=bol) translate(j) cylinder(d=7,h=wall,$fn=21);
+    }
+    module f2() for(j=bol) translate(j) { // bolts
+        cylinder(d=2.2,h=wall*3,center=true,$fn=21);
+        z(-2-wall+1)cylinder(d=4.6,h=2.01,$fn=21);
+        z(-wall+1)cylinder(d1=4.6,d2=2.2,h=1,$fn=21);
+    }
+
+    difference() {
+        f1();
+        translate([0,-offs1,0]) cylinder(d=9,h=7*3,$fn=47,center=true); // pot
+        translate([0,-offs2,0]) cylinder(d=4,h=wall*3,$fn=47,center=true);//pend
+        f2();
+    }
+}
+
+module potnut() color([.5,.5,.5]){
+    difference() {
+        z(-1) union() {
+            cylinder(d=11,h=1,$fn=30);
+            cylinder(d=9,h=8.5,$fn=53);
+        }
+        z(-1) cube([12,1,1.6],center=true);
+        cylinder(d=7,h=20,center=true); // thread
+    }
+}
+
+module potcoupler() { // maybe two flat parts
+    w=3;
+    groove=2;
+    gdiam=12+.1;
+    difference() {
+        hull() {
+            cylinder(d=20,h=w,$fn=51); // base
+            translate([-6/2,0,0])cube([6,17.5,w]); // base drive
+        }
+        cylinder(d=gdiam,h=groove,$fn=53); // plate pin groove
+        cylinder(d=7,h=w*3,center=true,$fn=23); // pot hole
+        translate([-8,0])cylinder(d=2.9,h=w*3,center=true,$fn=12); // pot ref
+    }
+    translate([0,10,-2.5+.01])cylinder(d=3,h=2.5,$fn=30); // drive pin
+}
+
+module ring(a,d1,d2,h,center=false) rz(-a/2) rotate_extrude(angle=a,convexity=5)
+ translate([d1/2,0,center?-h/2:0])square([d2/2-d1/2,h]);
+module rring(a,d1,d2,h,center=false) {
+ ring(a,d1,d2,h,center); let(t=[d1+d2,0]/4)
+ for(j=[-1,1])rz(j*a/2)translate(t)cylinder(d=d2/2-d1/2,h=h,center=center);
+ }
+
+//rring(60,25,30,3,$fn=55); #cylinder(d=25,h=3);
+
+module pottrimmer() {
+    wall=3; // horizontal wall 
+    wallv=2; // vertical wall
+    hi=8;  // overall part height
+    da=30; // motion angle
+    db=75; // detail angle
+    dc=da+35; // limiter angle
+    ds=55; // spring angle
+    offs1=14.5; // pot center
+    offs2=28.5; // this center, main pin
+    offs3=24.5; // drivig center
+    d2=8;  // main pin curvature
+    rd=28.5; // part diameter
+    ro=31.5; // outer part diameter
+    dpin=4;  // main pin diameter
+    ddrv=3;  // drive pin diameter
+    dpot=13; // pin pot pass throung
+    dapot=dpot+8; // ring around pinpot
+    trimh=41.5;
+    trimw=8;
+    module f1() {
+        z(-3+.01)cylinder(d=4,h=dpin,$fn=31); // pin
+        hull() {
+            cylinder(d=d2,h=wall,$fn=19); // base pin
+            ring(a=db,d1=0,d2=2*rd,h=wall,$fn=99); // base
+        }
+        let(q=2*(offs2-offs1))rring(da,q-dapot,q+dapot,wall); // pin pot outer
+        ring(a=db,d1=2*rd-wallv*2,d2=2*rd,h=hi,$fn=99); // wall
+        z(hi-wall) {
+            ring(a=db,d1=2*rd-wallv*2,d2=2*ro,h=wall,$fn=99);
+            translate([offs2,-trimw/2])cube([trimh-offs2,trimw,wall]);
+        }
+    }
+    module f2() {
+        let(q=2*(offs2-offs1),ra=dpot)
+            rring(da,q-ra,q+ra,wall*3,center=true,$fn=79); // pot pin path
+        hull() for(k=[offs3,offs1]) translate([offs2-k,0])  // drive pin path
+            cylinder(d=ddrv,h=wall*3,center=true,$fn=23);
+        ring(dc,2*26,2*ro,hi-wall,$fn=81);
+        rring(ds,2*23,2*23+2*2,wall*3,center=true,$fn=51);
+    }
+
+    rz(0){ // trim rotation test
+        difference() { f1(); f2(); }
+        translate([26,0])cylinder(d=0.5,h=wall,$fn=33);
+    }
+}
+
+module rockerarm() {
+    wall=2;
+    wwall=3;
+    hpin=5;
+    dpin=1.8;
+    h1=7;
+    hook=2.5;
+    module f1() {
+        translate([-11.5-hook,-wall/2,-9.5])cube([24.01+hook,wall,9.5]);
+        translate([-11.5,-wwall/2,-h1])cube([wwall,wwall,h1]);
+        hull() {
+            translate([ 12.5,-wwall/2,-h1])cube([wwall,wwall,h1]);
+            translate([13.5+4.5,0])rx(90)cylinder(d=2+dpin,h=wwall,center=true,$fn=15);
+        }
+        translate([13.5+4.5,0])rx(90)cylinder(d=dpin,h=hpin,center=true,$fn=15);
+    }
+    module f2() {
+        rx(90)cylinder(d=8,h=wwall,center=true,$fn=31);
+        translate([-15,-wwall,-1+.01])cube([15,wwall*2,1.01]);
+        translate([-11.5-hook/2,0,-1-hook]) hull() { // hook path
+            rx(90)cylinder(d=dpin/2,h=wwall,center=true,$fn=31);
+            for(t=[[-1,0,-dpin],[.5,0,-2.5],[-1,0,-8],[.5,0,-8]])translate(t)
+                rx(90)cylinder(d=dpin,h=wwall*1.5,center=true,$fn=15);
+        }
+    }
+    module f3() hull() {
+        translate([2,0,25-9])
+            rx(90)cylinder(r=25,h=hpin,center=true,$fn=60);
+    }
+    difference() {
+        intersection() { f1(); f3(); }
+        f2();
+    }
+}
+
+module rockerhook() {
+    w1=4-.1;
+    w2=7-.2;
+    d1=5-.2;
+    d2=2-.2;
+    h1=7.5;
+    h2=2.5;
+    w3=2;
+    d3=6.5;
+    p3=1;
+    o3=5.0;
+    difference() {
+        union() {
+          translate(-[d1,w1]/2) cube([d1,w1,h1]);
+          translate(-[d2,w2]/2) cube([d2,w2,h1]);
+          translate(-[0,w3]/2) cube([d3,w3,h2]);
+        }
+        translate([o3,0])cube([p3,w3*2,p3*2],center=true);
+        z(-.01)cylinder(d=3.3,h=2,$fn=17);
+        z(-.01)cylinder(d=1.8,h=h1+1,$fn=17);
+    }
+}
+
+
+module potasm() {
+    potplate();
+    translate([0,-14.5])ry(180)potnut();
+    //translate([0,-14.5,-7+2-.5])rx(180)potcoupler();
+    //translate([0,-28.5,-2.5])ry(180)rz(90)pottrimmer();
+    translate([0,-14.5,3]) rx(90)rockerarm();
+}
+
+///z(-14.5)stickA();
+//z(-14.5)stickB();
+
+//z(-14.5)ydrum();
+z(-14.5)xcap();
+
+//mntplate();
+//translate([-19,-18,-29.5]) spring1();
 //translate([0,52/2,0]) rx(90)sideplate();
 //rz(90)translate([0,52/2,0]) rx(90)sideplate();
+//rz(-90)translate([0,52/2,0]) rx(90)potasm();
+rz(180)translate([0,52/2,0]) rx(90)potasm();
