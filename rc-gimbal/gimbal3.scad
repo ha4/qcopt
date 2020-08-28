@@ -42,22 +42,23 @@ module mntplate()
         linear_extrude(convexity=5,height=h,scale=s)
             rsqr(sz1,r);
     module f2() { // cover
-        cylinder(d=cd,h=cw);
-        intersection() {
+        cylinder(d=cd,h=cw); // cup
+        intersection() { // stick bed
             cylinder(d=cd,h=cw*10,center=true);
             z(cw)rx(180)
                 rramp([ww,wh]+[wall,wall]*2,[ww1,wh1]+[wall,wall]*2,2,wz);
         }
+        // rotation stopper
     }
     module f2i() { // cover cutout
         z(cw+.01)rx(180)
-        rramp([ww,wh],[ww1,wh1]+[wall/2,-wall/2],2,wz+.03);
-        z(-axial) ry(90)
+        rramp([ww,wh],[ww1,wh1]+[wall/2,-wall/2],2,wz+.03); // stick bed
+        z(-axial) ry(90) // drum bed
         cylinder(r=wr-wdw,h=2*ww,center=true,$fn=43);
     }
     module f2a() {
         z(-axial)ry(90)difference() {
-            cylinder(r=wr,h=ww-wall,center=true,$fn=43);
+            cylinder(r=wr,h=ww-wall,center=true,$fn=43); // cylindrical shileld
             cylinder(r=wr-wdw,h=ww*2,center=true,$fn=43);
             cylinder(r=wr+wdw,h=ww1,center=true,$fn=43);
             translate([wz-3.5+wr-axial,0,0])cube([wr*2,wr*2,ww+.1],center=true);
@@ -292,6 +293,7 @@ module ydrum()
         cylinder(d=dax2+wall*2,h=aext+wall,$fn=31);
     }
     module f6() ry(90) z(h1/2-wall) let(dr=1.5) { // pot axis locker
+        // ###FIXME stopper location
         translate([dr/2,-rkr2,0]) hull() {
             cylinder(d=dr,h=aext+wall,$fn=23);
             translate([dr,0,0])cylinder(d=dr,h=aext+wall,$fn=23);
@@ -301,6 +303,9 @@ module ydrum()
             translate([dr,-dr/2,0])cylinder(d=dr,h=aext+wall,$fn=23);
             translate([dr,0,0])cylinder(d=dr,h=aext+wall,$fn=23);
         }
+    }
+    module f7() { // ###FIXME drum stopper
+        ring(360-90,25,30,5);
     }
 
     
@@ -388,6 +393,7 @@ module xcap()
                 translate(m)cylinder(r=r,h=wall*3,center=true,$fn=39);
     }
     module f6() rx(90) z(asz/2-.5-lug0) let(dr=1.5) { // pot axis locker
+        // ###FIXME stopper location
         translate([-rkr2,-dr/2]) hull() {
             cylinder(d=dr,h=aext+wall,$fn=23);
             translate([dr/2,-dr,0])cylinder(d=dr,h=aext+wall,$fn=23);
@@ -418,12 +424,25 @@ module potplate()
     w2=10;
     bol=[[-52/2+3.5,-wall-9.5],[52/2-3.5,-wall-13.5]];
     module f1() z(-wall) {
-        translate([-51/2,-17-lck])cube([51,17,wall]);// main
+        translate([-51/2,-17-lck])cube([51,17,wall]);// main plate
         translate([-20/2,-wall-.5]) cube([20,wall+.5,wall]); // main lock
         let(v=w2+2*(h2-h1)) hull() { // main extender for trimmer
             translate([-w2/2,-h2-lck]) cube([w2,h2,wall]);
             translate([-v/2,-17-lck]) cube([v,17,wall]);
         }
+        // main rocker spring wall && holder
+        translate([-51/2+5.5,-9-17-lck+.01]){
+            cube([11,9,wall]); 
+            z(wall-.01) {
+                cube([5.3,17,6]);
+                translate([5.3-3.8,0])cube([3.8,12,9]);
+            }
+        }
+        // main rocker support
+        // ###FIXME diagonalize top of support
+        // collision  with stand support on mountplate 
+        translate([51/2-5-5,-17-lck+2])
+            z(2.5-.01) cube([5,12,6.5]);
         // pot tube
         translate([0,-offs1,-7+wall]) cylinder(d=12,h=7,$fn=23);
          // trim brake
@@ -440,14 +459,34 @@ module potplate()
         z(-2-wall+1)cylinder(d=4.6,h=2.01,$fn=21);
         z(-wall+1)cylinder(d1=4.6,d2=2.2,h=1,$fn=21);
     }
+    module f3() { // rocker mount
+        // spring stopper carrage path
+        translate([-51/2+5.5+5.3/2,-9-17-lck,11.5/2-2.5]) {
+            cube([6,10*2,3.8],center=true);// main body path
+            cube([2,10*2,7],center=true);// railings
+            translate([-5.3,0,0])cube([5.3-2/2+.1,10,7]);// cut rest
+            rx(90)z(-15)cylinder(d=2.2,h=15,$fn=15);// bolt path
+        }
+        // rocker axis
+        // ###FIXME diagonalize top of support
+        // collision  with stand support on mountplate 
+        translate([51/2-5-5,-17-lck+2]) {
+            translate([5/2-.2,0,6/2]) cube([5,11*2,3.2],center=true);
+            hull() for(j=[0,3])
+            translate([5/2,j,6/2])cylinder(d=1.9,h=7,center=true,$fn=19);
+        }
+    }
 
     difference() {
         f1();
         translate([0,-offs1,0]) cylinder(d=9,h=7*3,$fn=47,center=true); // pot
         translate([0,-offs2,0]) cylinder(d=4,h=wall*3,$fn=47,center=true);//pend
         f2();
+        f3();
     }
 }
+
+///potplate();translate([0,-14.5,3]) rx(90)rockerarm();
 
 module potnut() color([.5,.5,.5]){
     difference() {
@@ -591,24 +630,29 @@ module rockerhook() {
     }
 }
 
-
-module potasm() {
-    potplate();
-    translate([0,-14.5])ry(180)potnut();
-    //translate([0,-14.5,-7+2-.5])rx(180)potcoupler();
-    //translate([0,-28.5,-2.5])ry(180)rz(90)pottrimmer();
-    translate([0,-14.5,3]) rx(90)rockerarm();
+module pot() // ###FIXME make a model
+{
 }
 
-///z(-14.5)stickA();
-//z(-14.5)stickB();
+module potasm()
+{
+    potplate();
+    translate([0,-14.5])ry(180)potnut();
+    translate([0,-14.5,-7+2-.5])rx(180)potcoupler();
+    translate([0,-28.5,-2.5])ry(180)rz(90)pottrimmer();
+    translate([0,-14.5,3]) rx(90)rockerarm();
+    translate([-51/2+8.1,-28.5,3.3])rx(-90) rockerhook();
+}
 
-//z(-14.5)ydrum();
+z(-14.5)stickA();
+z(-14.5)stickB();
+
+z(-14.5)ydrum();
 z(-14.5)xcap();
 
-//mntplate();
-//translate([-19,-18,-29.5]) spring1();
-//translate([0,52/2,0]) rx(90)sideplate();
-//rz(90)translate([0,52/2,0]) rx(90)sideplate();
-//rz(-90)translate([0,52/2,0]) rx(90)potasm();
-rz(180)translate([0,52/2,0]) rx(90)potasm();
+mntplate();
+translate([-19,-18,-29.5]) spring1();
+translate([0,52/2,0]) rx(90)sideplate();
+rz(90)translate([0,52/2,0]) rx(90)sideplate();
+rz(-90)translate([0,52/2,0]) rx(90)potasm();
+//rz(180)translate([0,52/2,0]) rx(90)potasm();
