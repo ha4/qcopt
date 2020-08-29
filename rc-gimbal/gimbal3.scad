@@ -3,6 +3,16 @@ module z(offs) translate([0,0,offs]) children();
 module rz(angle) rotate([0,0,angle]) children();
 module ry(angle) rotate([0,angle,0]) children();
 module rx(angle) rotate([angle,0,0]) children();
+module ring(a,d1,d2,h,center=false) rz(-a/2)
+ rotate_extrude(angle=a,convexity=5)
+ translate([d1/2,0,center?-h/2:0])square([d2/2-d1/2,h]);
+module rring(a,d1,d2,h,center=false) {
+ ring(a,d1,d2,h,center); let(t=[d1+d2,0]/4)
+ for(j=[-1,1])rz(j*a/2)translate(t)
+     cylinder(d=d2/2-d1/2,h=h,center=center);
+ }
+
+//rring(60,25,30,3,$fn=55); #cylinder(d=25,h=3);
 
 module mntplate()
 {
@@ -515,14 +525,6 @@ module potcoupler() { // maybe two flat parts
     translate([0,10,-2.5+.01])cylinder(d=3,h=2.5,$fn=30); // drive pin
 }
 
-module ring(a,d1,d2,h,center=false) rz(-a/2) rotate_extrude(angle=a,convexity=5)
- translate([d1/2,0,center?-h/2:0])square([d2/2-d1/2,h]);
-module rring(a,d1,d2,h,center=false) {
- ring(a,d1,d2,h,center); let(t=[d1+d2,0]/4)
- for(j=[-1,1])rz(j*a/2)translate(t)cylinder(d=d2/2-d1/2,h=h,center=center);
- }
-
-//rring(60,25,30,3,$fn=55); #cylinder(d=25,h=3);
 
 module pottrimmer() {
     wall=3; // horizontal wall 
