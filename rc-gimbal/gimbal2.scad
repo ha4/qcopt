@@ -6,22 +6,23 @@ tol=0.2; // movable elements tolarance luft
 dmnt=9; // axis exit hub diameter
 // general axis prarm
 laxis=32;
-// central hub param
-dcros=7.5; // internal axis diameter
-hcros=19.8; // internal axis length
-wcros=5; // gimbal cross wheel
-wheel=22; // central wheel diameter
 // yaxis and cover param
 dcap=23; // cap diameter
 lcap=29; // cap axial lenght
 capcut=0.5; // ycap cur
 wsize=12; // stick window size
-dcov=18; // xcover height
+dcov=23; // xcover height
+// central hub param
+dcros=5.5; // internal axis diameter
+//hcros=18.8; // internal axis length
+hcros=dcap-2*wall-tol; // internal axis length
+wcros=5; // gimbal cross wheel
+wheel=22; // central wheel diameter
 // mount base
 mountsz=40; // x,y size
 mountlck=16; // lock path size
 mounth=dcap/2-capcut-wall; // axis offset
-mountw=16; // window size
+mountw=20; // window size
 standsz=5;  // x,y stand size
 standh=mounth+dcap/4;// stand height
 standz=[4,6,8,11]; // reference and bolt offset
@@ -29,16 +30,21 @@ standz=[4,6,8,11]; // reference and bolt offset
 
 *let(a=$t*360,r=30,
     m=r*sin(a*2)*sqrt(2)/2,
-    x=cos(a)-sin(a),y=sin(a)+cos(a))
+    x=cos(a)-sin(a)
+    //x=0
+    ,
+    y=sin(a)+cos(a)
+    //y=0
+    )
 {
     rotate([x*m,0])ycap();
     rotate([0,y*m])xcov();
-    rotate([x*m,y*m])
-    { 
-        //color([.6,.6,.6])cylinder(d=dstick,h=40,$fn=23);
-        crosup();
-        crosdn();
-    }
+    rotate([x*m,y*m]) 
+      color([.6,.6,.6])cylinder(d=dstick,h=40,$fn=23);
+    ry(y*m)
+    rx(x*m) crosup();
+    rx(x*m)
+    ry(y*m) crosdn();
     z(mounth){
         mountbase();
         for(j=[0:90:359])rz(j)
@@ -51,7 +57,7 @@ standz=[4,6,8,11]; // reference and bolt offset
 //crosdn();
 //ycap();
 //xcov();
-mountbase();
+//mountbase();
 //sideplate();
 
 module z(offs) translate([0,0,offs]) children();
@@ -61,9 +67,11 @@ module rz(angle) rotate([0,0,angle]) children();
 
 module crosup() {
     u=dcros/2;
-    module f1()
-    for(j=[[90,0],[0,90]]) rotate(j) // crossing
-        cylinder(d=dcros,h=hcros,center=true,$fn=30);
+    module f1() hull() {
+        ry(90)
+            cylinder(d=dcros,h=hcros,center=true,$fn=30);
+        cube([hcros/2,dcros,dcros],center=true);
+    }
     module f2(d=wheel) // round top
     rx(90) intersection() { 
       cylinder(d=d,h=wcros,$fn=40,center=true);
@@ -71,21 +79,42 @@ module crosup() {
       rx(-90)linear_extrude(height=d/2,scale=wheel/(hcros/3))
         translate([-hcros/4,-wcros/2])square([hcros/2,wcros]);
     }
-    module f3() {// cutawat
-        cylinder(d=dstick,h=hcros,$fn=23); // stick
+    module f3() {// cut
+        z(5)cylinder(d=dstick,h=hcros,$fn=23); // stick
         for(a=[0:90:359])rz(a)rx(90)z(hcros/2-5) // axle
             cylinder(d=daxle,h=hcros,$fn=23);
-        z(-u)cube([hcros+1,hcros+1,u],center=true);
-    }
-    module f4() z(-u)linear_extrude(height=u,convexity=6)
-        projection(cut=false)f1();
+        z(-u-.01)cylinder(d=daxle,h=u*2,$fn=23);
+        }
     difference() {
-        union() { f1(); f2(); f4(); }
+        union() { f1(); f2(); }
         f3();
     }
 }
 
 module crosdn() {
+    h=hcros/3;
+    module zdrill() z(-h+2) cylinder(d=daxle,h=h,$fn=23);
+
+    module f1() {
+        rx(90)
+        cylinder(d=dcros,h=hcros,center=true,$fn=30);
+        intersection() {
+            ry(90)
+            cylinder(d=hcros,h=wcros,center=true,$fn=40);
+            z(-h/2)
+                 cube([wcros,hcros,h],center=true);
+        }
+    }
+    module f2() {
+        cube([dcros,dcros,dcros/2+.5]*2,center=true);
+        axialdrill();
+        zdrill();
+    }
+    module f3()
+        z(-dcros/2-1-.1) cylinder(d=wcros,h=1,$fn=30);
+    difference() { f1(); f2(); }
+    difference() { f3(); zdrill(); }
+    
 }
 
 module axialdrill() for(y=[0:90:359]) rz(y) rx(90) z(dcap/2-wall-wall)
@@ -181,6 +210,9 @@ module mountbase()
             hull() for(t=[0,90])rx(t) z(-.1)cube([wall,d,.1]);
             hull() for(t=[0,90])ry(-t) z(-.1)cube([d,wall,.1]);
         }
+    module f4(h=3)z(wall)
+        translate([0,mountw/2])rx(180+45)
+        translate(-[lcap+tol,0,0]/2) cube([lcap+tol,h,wall]);
 
     module stand() {
         difference() {
@@ -199,6 +231,7 @@ module mountbase()
     }
 
     difference() { f1(); f2(); }
+    for(j=[0,1])mirror([0,j])f4();
     for(j=[0:90:359])rz(j)
         translate([xy/2,xy/2,0])rz(90)ry(180)stand();
 }
