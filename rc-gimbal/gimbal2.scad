@@ -28,7 +28,7 @@ standh=mounth+dcap/4;// stand height
 standz=[4,6,8,11]; // reference and bolt offset
 
 
-*let(a=$t*360,r=30,
+let(a=$t*360,r=30,
     m=r*sin(a*2)*sqrt(2)/2,
     x=cos(a)-sin(a)
     //x=0
@@ -57,6 +57,7 @@ standz=[4,6,8,11]; // reference and bolt offset
 //crosdn();
 //ycap();
 //xcov();
+//z(mounth)
 //mountbase();
 //sideplate();
 
@@ -68,21 +69,21 @@ module rz(angle) rotate([0,0,angle]) children();
 module crosup() {
     u=dcros/2;
     module f1() hull() {
-        ry(90)
+        rx(90)
             cylinder(d=dcros,h=hcros,center=true,$fn=30);
-        cube([hcros/2,dcros,dcros],center=true);
+        cube([dcros,hcros/2,dcros],center=true);
     }
     module f2(d=wheel) // round top
     rx(90) intersection() { 
       cylinder(d=d,h=wcros,$fn=40,center=true);
       sphere(d=d,$fn=66);
-      rx(-90)linear_extrude(height=d/2,scale=wheel/(hcros/3))
-        translate([-hcros/4,-wcros/2])square([hcros/2,wcros]);
+      rx(-90)z(dcros/2-.1)
+        linear_extrude(height=d/2-dcros/2,scale=wheel/(wcros/2))
+        square([wcros,wcros],center=true);
     }
     module f3() {// cut
         z(5)cylinder(d=dstick,h=hcros,$fn=23); // stick
-        for(a=[0:90:359])rz(a)rx(90)z(hcros/2-5) // axle
-            cylinder(d=daxle,h=hcros,$fn=23);
+        axialdrill(hcros/2-5);
         z(-u-.01)cylinder(d=daxle,h=u*2,$fn=23);
         }
     difference() {
@@ -93,31 +94,33 @@ module crosup() {
 
 module crosdn() {
     h=hcros/3;
-    module zdrill() z(-h+2) cylinder(d=daxle,h=h,$fn=23);
+    h1=1;
+    width=dcros+h1;
+    module zdrill() z(-h+h1) cylinder(d=daxle,h=h,$fn=23);
 
     module f1() {
-        rx(90)
+        ry(90)
         cylinder(d=dcros,h=hcros,center=true,$fn=30);
         intersection() {
-            ry(90)
-            cylinder(d=hcros,h=wcros,center=true,$fn=40);
+            rx(90)
+            sphere(d=hcros,$fn=90);
             z(-h/2)
-                 cube([wcros,hcros,h],center=true);
+                 cube([hcros,wcros,h],center=true);
         }
     }
     module f2() {
-        cube([dcros,dcros,dcros/2+.5]*2,center=true);
-        axialdrill();
+        cube([dcros,dcros,dcros/2+h1/2]*2,center=true);
+        rz(90)axialdrill(width);
         zdrill();
     }
     module f3()
-        z(-dcros/2-1-.1) cylinder(d=wcros,h=1,$fn=30);
+        z(-dcros/2-h1-.1) cylinder(d=wcros,h=1,$fn=30);
     difference() { f1(); f2(); }
     difference() { f3(); zdrill(); }
-    
 }
 
-module axialdrill() for(y=[0:90:359]) rz(y) rx(90) z(dcap/2-wall-wall)
+module axialdrill(base=dcap/2-2*wall)
+    for(y=[0,180]) rz(y) rx(90) z(base)
         cylinder(d=daxle,h=hcros,$fn=23);
 
 module ycap() {
@@ -150,8 +153,8 @@ module ycap() {
         cylinder(d=dcros,h=wall,$fn=30);
     }
 
-    difference() { outer(); inner(); axialdrill(); }
-    difference() { union() { axes(); lugs();} axialdrill(); }
+    difference() { outer(); inner(); for(t=[0,90])rz(t)axialdrill(); }
+    difference() { union() { axes(); lugs();} for(t=[0,90])rz(t)axialdrill(); }
 }
 
 module xcov() {
@@ -189,7 +192,7 @@ module xcov() {
         hull() for (y=[0,180]) rz(y) { j3(); j4(); } // down plate
     difference() {
         union() {mainaxis(); orthoaxis();}
-        axialdrill();
+        for(t=[0,90])rz(t)axialdrill();
     }
     bottom();
 }
@@ -198,6 +201,9 @@ module mountbase()
 {
     xy=mountsz-2*wall;
     xy1=(mountsz-mountlck)/2;
+    nut=4;
+    nuth=1;
+    refsz=2;
     module f1() {
         translate(-[xy,xy,0]/2)cube([xy,xy,wall]);
         for(j=[0:90:359])rz(j) translate([mountlck/2,mountlck/2])
@@ -217,14 +223,14 @@ module mountbase()
     module stand() {
         difference() {
             f3();
-            translate([0,standsz/2,standz[0]]) rx(45)cube(2,center=true);
-            translate([standsz/2,0,standz[1]]) ry(45)cube(2,center=true);
+            translate([0,standsz/2,standz[0]]) rx(45)cube(refsz,center=true);
+            translate([standsz/2,0,standz[1]]) ry(45)cube(refsz,center=true);
             translate([0,standsz/2,standz[2]]) ry(90) {
-                z(standsz) cylinder(d=4,h=2,center=true,$fn=6);
+                z(standsz) cylinder(d=nut,h=nuth*2,center=true,$fn=6);
                 cylinder(d=2,h=standsz*3,center=true,$fn=23);
             }
             translate([standsz/2,0,standz[3]]) rx(90) {
-                z(standsz) cylinder(d=4,h=2.1,center=true,$fn=6);
+                z(-standsz)rz(90)cylinder(d=nut,h=nuth*2,center=true,$fn=6);
                 cylinder(d=2,h=standsz*3,center=true,$fn=23);
             }
         }
@@ -241,14 +247,14 @@ module sideplate()
     xy=mountsz-2*wall;
     ax=mounth+wall;
     deep=wall+(xy-laxis)/2-.1;
-    
+    refsz=2;
     module f1() {
         translate([-xy/2,wall])cube([xy,standh,wall]);
         translate(-[mountlck-.1,0]/2)cube([mountlck-.1,wall*2,wall]);
         translate([-xy/2+standsz/2,standz[0]+wall,wall])
-                rz(45)cube(2,center=true);
+                rz(45)cube(refsz-tol/2,center=true);
         translate([xy/2-standsz/2,standz[1]+wall,wall])
-                rz(45)cube(2-.1,center=true);
+                rz(45)cube(refsz-tol/2,center=true);
     }
     module f2()
         translate([0,ax])
@@ -263,3 +269,15 @@ module sideplate()
                 cylinder(d=2,h=standsz*3,center=true,$fn=23);
     }
 }
+
+module dexpmnt() {
+    z(-18)cylinder(d=38,h=18,$fn=81);
+    z(-5) for(x=[-.5,.5],y=[-.5,.5])translate([x,y]*30) 
+        cylinder(d=1.5,h=5,$fn=15);
+    module dx(x) let(sz=40,d=199)
+        translate([x,0]*sz/2)translate([-x*d/2,0])cylinder(d=d,h=2,$fn=200);
+    intersection() { dx(-1); dx(+1); rz(90) dx(-1); rz(90) dx(1);} 
+        
+}
+
+//#dexpmnt();
