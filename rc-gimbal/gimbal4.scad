@@ -1,4 +1,5 @@
 wall=1.5;
+wall1=0.6;
 tol=0.2;
 dmain=38;
 dlug=9;
@@ -124,26 +125,57 @@ module mntstand()
         z(-hbase)cube([wall,wall,hbase]);
     module f1b()
         z(-hbase)cube([dlug/1,wall,wall]);
-
+    // stand support
     translate([0,-dlug/2])hull(){f1a(); f1b();}
     translate([0,dlug/2-wall])hull(){f1a(); f1b();}
+    // stand wall
     hull() { translate([0,-dlug/2])f1a();
     translate([0,dlug/2-wall])f1a(); }
+    // stand pivot center
     ry(90)cylinder(d1=dlug,d2=dlug/2,h=wall*2);
 }
 
 module mntpotstand()
 {
+    potdia=6.5+tol; // central rod for case size
+    potw=10; // pot width
+    poth=6.5; // pot bottom to axis size
+    potz=5.2; // axial size
+    potpins=3.5;
+    
+    h1=potw;
+    w1=wall1+wall+potz;
     module f1a()
-        z(-hbase)cube([wall,wall,hbase]);
+        translate([0,-h1/2,-poth-wall])
+        cube([w1,wall,wall]);
     module f1b()
-        z(-hbase)cube([dlug/1,wall,wall]);
+        translate([wall1+potz,-(h1-2*wall+.1)/2,-poth-wall])
+        cube([wall,h1-2*wall+.1,wall]);
+    module f1t()
+        translate([wall*2,0,-hbase+poth+wall])children();
+    module f1 ()
+        hull() for(t=[0,1])mirror([0,t,0])f1a();
+    module f2 () {
+        for(t=[0,1])mirror([0,t,0])
+            hull() { f1a(); f1t() f1a(); }
+        hull() { f1b(); f1t() f1b(); }
+    }
+    module f3() 
+        hull() { f1b(); z(poth)f1b(); }
+    module f4() difference() {
+        translate([0,-h1/2,-poth-wall])
+            cube([wall1,h1,poth+wall]);
+        ry(90)z(-.01)
+            cylinder(d=potdia,h=potz+2*wall,$fn=31);
+    }
+    module f5()
+      for(k=[-1,0,1]) translate([potpins+wall1,k*2.5,-poth-wall-.1])
+          cylinder(d=1,h=wall*2,$fn=19);
 
-    translate([0,-dlug/2])hull(){f1a(); f1b();}
-    translate([0,dlug/2-wall])hull(){f1a(); f1b();}
-    hull() { translate([0,-dlug/2])f1a();
-    translate([0,dlug/2-wall])f1a(); }
-    ry(90)cylinder(d1=dlug,d2=dlug/2,h=wall*2);
+    difference() { f1(); f5(); }
+    f2();
+    f3();
+    f4();
 }
 
 module mntbase0()
@@ -165,6 +197,8 @@ module mntbase()
     module f2() {
         rz(-90)translate([-mntwidth1/2,0]) mntstand();
         translate([-mntwidth2/2,0]) mntstand();
+        rz(90)translate([-mntwidth1/2,0]) mntpotstand();
+        rz(180)translate([-mntwidth2/2,0]) mntpotstand();
         z(-hbase+wall/2) cylinder(d=dmain,h=wall,center=true);
     }
     difference() { f2(); f0(); }
@@ -178,13 +212,12 @@ intersection() {
 
 module rv09()
 {
-    cylinder(d=6.5,h=0.5,$fn=30);
-    color([.2,.2,.2]) rotary6(hh=4.0);
-    translate([-9.8/2,-6.5,-5])cube([9.8,12,5]);
-    translate([0,-6.5,-3.5])
+    cylinder(d=6.5,h=0.5,$fn=30); // rod ring
+    color([.2,.2,.2]) rotary6(hh=4.0); // axias rod
+    translate([-9.8/2,-6.5,-5])cube([9.8,12,5]); // body
+    translate([0,-6.5,-3.5]) // connection pin
     for(x=[-2.5,0,2.5]) translate([x,0,0])
-        rotate([90,0,0])
-        cylinder(d=.5,h=3.5);
+        rx(90) cylinder(d=.5,h=3.5);
 }
 
 
@@ -195,7 +228,7 @@ drivey(true);
 //mntbase0();
 mntbase();
 rx(90)z(10.2)rv09();
-rz(90)rx(90)z(8.2)rv09();
+rz(90)rx(90)z(8.7)rv09();
 
 
 module dexpmnt() {
