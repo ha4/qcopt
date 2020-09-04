@@ -14,6 +14,9 @@ d3axis=1.5; // 3mm service axis
 hbase=15;
 hstick=10;
 dstick=6;
+mntwidth1=22-tol;
+mntwidth2=19-tol;
+
 module z(offs) translate([0,0,offs]) children();
 module rz(angle) rotate([0,0,angle]) children();
 module ry(angle) rotate([0,angle,0]) children();
@@ -45,11 +48,14 @@ module capxy()
     f2();
 }
 
-module drivex()
+module drivex(pot=false)
 {
     o=d1axis/2-wall;
-    module f0() for(r=[0,90])rz(r)rx(90)
-        cylinder(d=axis,h=dmain,center=true,$fn=23);
+    module f0() {
+        for(r=[0,90])rz(r)rx(90)
+            cylinder(d=axis,h=dmain,center=true,$fn=23);
+        if(pot)rx(90)rotary6(tol=tol/2,hh=dmain/2);
+        }
     module f1() {
         intersection() {
             rotate_extrude(convexity=4,$fn=81)
@@ -65,7 +71,7 @@ module drivex()
     difference() { f2(); f0(); }
 }
 
-module drivey1()
+module drivey_svc()
 {
     o1=d2axis/2-wall;
     h1=(axismain-tol)/2-o1;
@@ -89,12 +95,15 @@ module drivey1()
 }
 
 
-module drivey2()
+module drivey(pot=false)
 {
     o1=d2oaxis/2-wall;
     h4=(z3axis-tol)/2-o1;
-    module f0() for(r=[0,90])rz(r)rx(90)
-        cylinder(d=axis,h=dmain,center=true,$fn=23);
+    module f0() {
+        for(r=[0,90])rz(r)rx(90)
+            cylinder(d=axis,h=dmain,center=true,$fn=23);
+        if(pot)ry(90)rz(90)rotary6(tol=tol/2,hh=dmain/2);
+    }
     module f1() {
         rx(90)rotate_extrude(angle=180,convexity=4,$fn=81)
             translate([o1,-dlug/2])square([wall,dlug]);
@@ -109,37 +118,85 @@ module drivey2()
     difference() { f2(); f3(); }
 }
 
-module mntbase()
+module mntstand()
 {
-    w1=19-tol;
-    w2=22-tol;
-    module f0() for(r=[0,90])rz(r)rx(90)
-        cylinder(d=axis,h=dmain,center=true,$fn=23);
     module f1a()
         z(-hbase)cube([wall,wall,hbase]);
     module f1b()
         z(-hbase)cube([dlug/1,wall,wall]);
-    module f1() {
-        translate([0,-dlug/2])hull(){f1a(); f1b();}
-        translate([0,dlug/2-wall])hull(){f1a(); f1b();}
-        hull() { translate([0,-dlug/2])f1a();
-        translate([0,dlug/2-wall])f1a(); }
-        ry(90)cylinder(d1=dlug,d2=dlug/2,h=wall*2);
-    }
+
+    translate([0,-dlug/2])hull(){f1a(); f1b();}
+    translate([0,dlug/2-wall])hull(){f1a(); f1b();}
+    hull() { translate([0,-dlug/2])f1a();
+    translate([0,dlug/2-wall])f1a(); }
+    ry(90)cylinder(d1=dlug,d2=dlug/2,h=wall*2);
+}
+
+module mntpotstand()
+{
+    module f1a()
+        z(-hbase)cube([wall,wall,hbase]);
+    module f1b()
+        z(-hbase)cube([dlug/1,wall,wall]);
+
+    translate([0,-dlug/2])hull(){f1a(); f1b();}
+    translate([0,dlug/2-wall])hull(){f1a(); f1b();}
+    hull() { translate([0,-dlug/2])f1a();
+    translate([0,dlug/2-wall])f1a(); }
+    ry(90)cylinder(d1=dlug,d2=dlug/2,h=wall*2);
+}
+
+module mntbase0()
+{
+    module f0() for(r=[0,90])rz(r)rx(90)
+        cylinder(d=axis,h=dmain,center=true,$fn=23);
     module f2() {
-        for(t=[0,180])rz(t)translate([-w1/2,0]) f1();
-        for(t=[90,270])rz(t)translate([-w2/2,0]) f1();
+        for(t=[90,270])rz(t)translate([-mntwidth1/2,0]) mntstand();
+        for(t=[0,180])rz(t)translate([-mntwidth2/2,0]) mntstand();
         z(-hbase+wall/2) cylinder(d=dmain,h=wall,center=true);
     }
     difference() { f2(); f0(); }
 }
 
+module mntbase()
+{
+    module f0() for(r=[0,90])rz(r)rx(90)
+        cylinder(d=axis,h=dmain,center=true,$fn=23);
+    module f2() {
+        rz(-90)translate([-mntwidth1/2,0]) mntstand();
+        translate([-mntwidth2/2,0]) mntstand();
+        z(-hbase+wall/2) cylinder(d=dmain,h=wall,center=true);
+    }
+    difference() { f2(); f0(); }
+}
+
+module rotary6(tol=0,hh=6.5) let(flatspot=1.5)
+intersection() {
+    cylinder(d=6+tol,h=hh,$fn=32);
+    translate([0,-flatspot])cube([6+tol,6+tol,hh*3],center=true);
+}
+
+module rv09()
+{
+    cylinder(d=6.5,h=0.5,$fn=30);
+    color([.2,.2,.2]) rotary6(hh=4.0);
+    translate([-9.8/2,-6.5,-5])cube([9.8,12,5]);
+    translate([0,-6.5,-3.5])
+    for(x=[-2.5,0,2.5]) translate([x,0,0])
+        rotate([90,0,0])
+        cylinder(d=.5,h=3.5);
+}
+
 
 //capxy();
-drivex();
-drivey1();
-drivey2();
+drivex(true);
+//drivey_svc();
+drivey(true);
+//mntbase0();
 mntbase();
+rx(90)z(10.2)rv09();
+rz(90)rx(90)z(8.2)rv09();
+
 
 module dexpmnt() {
     z(-18)cylinder(d=38,h=18,$fn=81);
