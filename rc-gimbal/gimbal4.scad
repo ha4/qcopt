@@ -126,21 +126,21 @@ module drivey(pot=false)
 module mntstand()
 {
     poth=6.5; // pot bottom to axis size
-    dis=wall*2-wall1;
-    dl=dlug/1.2;
-    module f1a()
+    dis=wall*2-wall;
+    dl=dlug;
+    module f1a() // vertical element
         z(-hbase)cube([wall,wall,hbase]);
-    module f1b()
-        z(-hbase)cube([dl/1,wall,wall]);
+    module f1b() // laydown element
+        #z(-hbase)cube([dl/1,wall,wall]);
     // stand support
-    translate([0,-dl/2])hull(){f1a(); f1b();}
-    translate([0,dl/2-wall])hull(){f1a(); f1b();}
+    translate([wall,-dl/2])hull(){f1a(); f1b();}
+    translate([wall,dl/2-wall])hull(){f1a(); f1b();}
     // stand wall
-    hull() { translate([0,-dl/2])f1a();
-    translate([0,dl/2-wall])f1a(); }
+    hull() { translate([wall,-dl/2])f1a();
+    translate([wall,dl/2-wall])f1a(); }
     // stand pivot center
-    ry(90)z(wall1-.01)cylinder(d1=dl,d2=dl/2,h=dis+.01);
-    ry(90)cylinder(d=dl,h=wall1);
+    ry(90)cylinder(d2=dl,d1=dl-2*wall,h=wall,$fn=36);
+    ry(90)z(wall-.01)cylinder(d=dl,h=wall+.01,$fn=36);
 }
 
 module mntpotstand()
@@ -227,21 +227,26 @@ module rv09(angle=0)
     pins=4.0;
     
     color([.2,.2,.2])rz(angle)rotary6(hh=sl); // axias rod
+    color([.5,.5,.5])
     cylinder(d=rd,h=rh,$fn=30); // shaft ring
+    color([.5,.5,.5])
     translate(-[w/2,o,d])cube([w,h,d]); // body
-    color([.5,.5,.5])translate([0,-o,-pins]) // connection pins
+    color([.7,.7,.7])translate([0,-o,-pins]) // connection pins
     for(x=[-2.5,0,2.5]) translate([x,0,0]) {
         cube([1.5,3*2,0.4],center=true);
         rx(90) cylinder(d=.5,h=7.5*2,center=true,$fn=6);
     }
 }
 
-rot1=30;
-rot2=12;
+rot1=0;
+rot2=0;
+//ry(rot1)rx(rot2)
 //capxy();
-ry(rot1)drivex(true);
+ry(rot1)
+drivex(true);
 //drivey_svc();
-rx(rot2)drivey(true);
+rx(rot2)
+drivey(true);
 //mntbase0();
 mntbase();
 rx(90)z(mntwidth1/2-wall1-tol)rv09(-rot1);
@@ -258,4 +263,4 @@ module dexpmnt() {
         
 }
 
-//z(3)#dexpmnt();
+///z(3)#dexpmnt();
