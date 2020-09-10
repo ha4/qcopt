@@ -40,44 +40,42 @@ module co_bat2200(w=[.8,.8,.8])
     center plate
  */
 module f1(a=0) let(w=16,h=92)
-    rotate([0,0,45]) translate([-(w+a)/2,-h/2,0]) cube([w+a,h,2]);
+    rotate([0,0,45]) translate([-(w+a)/2,-h/2,0]) square([w+a,h]);
 module j1(i,r=95) let(a=r-r*cos(i), b=r-r*sin(i)) intersection()
     { f1(b);  rotate([0,0,90]) f1(a); }
 module bevel1() 
     for(i=[0:5:90]) hull() {j1(i); j1(i+5); }
 
-module arm_mnt(sel=1,height=5) {
-    cylinder(d=3.5,h=height,$fn=30,center=true);
-    if(sel==1) for(i=[-.5,.5])
-        translate([i*15,-14.5,0])
-            cylinder(d=3.5,h=height,$fn=30,center=true);
+module arm_mnt(full=true) {
+    circle(d=3.5,$fn=30);
+    if(full) for(i=[-.5,.5]) translate([i*15,-14.5])
+        circle(d=3.5,$fn=30);
 }
 
-module rpath(x,y,z) hull()
+module rpath(x,y) hull()
     if (x>=y)
-        for(i=[-x+y,x-y]/2) translate([i,0,0])
-        cylinder(d=y,h=z,$fn=30,center=true);
+        for(i=[-x+y,x-y]/2) translate([i,0]) circle(d=y,$fn=30);
     else
-        for(j=[-y+x,y-x]/2) translate([0,j,0])
-        cylinder(d=x,h=z,$fn=30,center=true);
+        for(j=[-y+x,y-x]/2) translate([0,j]) circle(d=x,$fn=30);
 
-module belt_mnt(a,w=20,d=3,h=5)
-    for(x=[-a,a]/2) translate([x,0,0])
-        rpath(d,w,h);
+module belt_mnt(a,w=20,d=3)
+    for(x=[-a,a]/2) translate([x,0])
+        rpath(d,w);
 
-module sqr_hole(w,h,d=3.2,height=5)
+module sqr_hole(w,h,d=3.2)
     hull()
-        for(x=[-w+d,w-d]/2,y=[-h+d,h-d]/2) translate([x,y,0])
-            cylinder(d=d,h=height,$fn=30,center=true);
+        for(x=[-w+d,w-d]/2,y=[-h+d,h-d]/2) translate([x,y])
+            circle(d=d,$fn=30);
 
-module co_center() difference() {
+module co_center() linear_extrude(height=2)
+  difference() {
     bevel1();
     // electronics
-    let(m=30.5,g=[m,-m]/2)for(x=g,y=g) translate([x,y,0])
-            cylinder(d=3.5,h=5,$fn=30,center=true);
+    let(m=30.5,g=[m,-m]/2)for(x=g,y=g) translate([x,y])
+            circle(d=3.5,$fn=30);
     // what for?
     let(m=45,g=[m,-m]/2)for(x=g,y=g) translate([x,y,0])
-            cylinder(d=3.5,h=5,$fn=30,center=true);
+            circle(d=3.5,$fn=30);
     // arm
     let(m=41)for(a=[0:90:359])rotate([0,0,a+45])translate([0,m,0])
         arm_mnt();
@@ -94,9 +92,9 @@ module co_center() difference() {
 
 module f2a(a=0) let(dx=8,L=50)
     translate([-a/2,0,0])rotate([0,0,45])
-        translate([L-dx,0,0])cylinder(d=dx+a,h=2,$fn=70);
+        translate([L-dx,0,0])circle(d=dx+a,$fn=70);
 module f2b(a=0) let(w=36,h=123)
-    translate([0,0,1]) sqr_hole(w=w+a,h=h,d=10,height=2);
+    sqr_hole(w=w+a,h=h,d=10);
 
 module j2(i,r=50) let(a=r-r*cos(i), b=r-r*sin(i)) intersection()
     { f2b(b);  f2a(a); }
@@ -104,28 +102,27 @@ module bevel2() for(i=[0:5:90]) hull() {j2(i); j2(i+5); }
 module symm4() for(n=[0:1],m=[0:1]) 
     mirror([n,0,0]) mirror([0,m,0]) children();
 
-module co_bottom() difference() {
+module co_bottom() linear_extrude(height=2)
+  difference() {
     union() {
         f2b();
         symm4() bevel2();
         hull() symm4() f2a();
     }
-    let(m=41)for(a=[0:90:359])rotate([0,0,a+45])translate([0,m,0])
+    let(m=41)for(a=[0:90:359])rotate([0,0,a+45])translate([0,m])
         arm_mnt(0);
 
     let(r=160,dx=62.6) 
-    for(n=[0,1])mirror([n,0,0])
-        translate([r+dx/2,0,0]) cylinder(r=r,h=5,center=true,$fn=90);
+    for(n=[0,1])mirror([n,0])
+        translate([r+dx/2,0]) circle(r=r,$fn=90);
     belt_mnt(52);
     belt_mnt(32);
     // vhent
-    for(y=[-24,24]) translate([0,y,0]) sqr_hole(27,10);
+    for(y=[-24,24]) translate([0,y]) sqr_hole(27,10);
     sqr_hole(12.7,12.7);
     // other mnt
     rotate([0,0,90])belt_mnt(80,17.5,2.5);
-    for(y=[-51.28,51.28]) translate([0,y,0]) belt_mnt(26,12.5,2.5);
-
-    
+    for(y=[-51.28,51.28]) translate([0,y]) belt_mnt(26,12.5,2.5);
 }
 //let(n=8)for(i=[0:n]) translate([0,0,-i*3])j2(i*90/n);
 
@@ -179,7 +176,8 @@ module arm_mounts(d,h1,h2) {
             translate(p1) rotate([0,0,180-ab])
                 ringsect([d*.75,nb,h1],curv);
         }
-        arm_mnt(height=abs(h2)*3);
+        linear_extrude(height=abs(h2)*4,center=true,convexity=3)
+            arm_mnt();
     }
 }
 
@@ -208,12 +206,11 @@ module arm_frame(L,w1,wall,h,h2) {
 }
 
 module mot_mnt(d1=6.5,d2=3.2) {
-    m1=19;
-    m2=16;
+    m=[19,16]/2;
     cylinder(d=d1,h=9,center=true,$fn=30);
-    for(a=[0:90:359])
-    rotate([0,0,a+45])translate([(m1+m2)/4,0,0])
-    rpath((19-16)/2+d2,d2,9);
+    for(a=[0:90:359]) rotate([0,0,a+45])
+        hull()for(j=m)translate([j,0])
+            cylinder(d=d2,h=9,$fn=31);
 }
 
 module co_arm(sz=125, bsz=41, dmot=24, h=4, hm=6, htot=18, wall=2) {
@@ -287,22 +284,22 @@ module drillptrn(x=30.5,xs=36,ds=10,d=3.2,d0=7.5,h1=2,h2=15,pcb=1.5,tol=.2,clamp
 }
 
 module assembly() {
-fsz=200; // frame size
+fsz=250; // frame size
 for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) rotate([0,180,0]) translate([0,0,18-6])co_arm2();
     //co_arm();
 translate([0,0,-2.0-18.0])
 co_center();
 co_bottom();
+translate([0,0,2])co_bat2200();
 translate(-[0,0,18-6])
 for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
     rotate([0,0,-45-90]) co_x2204();
     translate([0,0,22]) co_5040();
 }
-translate([0,0,2])co_bat2200();
 }
 
-///assembly();
-drillptrn(clamp=false);
+assembly();
+//drillptrn(clamp=false);
 //co_arm2();
 //co_bottom();
 //co_center();
