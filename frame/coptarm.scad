@@ -6,27 +6,31 @@
   ha=arm thinkness htot=baseplate heught wall=thinkness,
   wmnt=mount wall, mntx,mnty=mount set sizes,
   dmnt=baseplate mount diameterm, drill=bolts diameter, 
-  crossbar=number of crossbars
+  cbars=number of crossbars
+  upper=type of mount, upper easy to print
  */
 
-module co_arm(sz=125, bsz=41,
+module copter_arm(sz=125, bsz=41,
     dmot=27, hm=4, r1=16/2, r2=19/2, hole=6.5,
     ha=6, htot=18, wall=2, wmnt=5, mntx=15, mnty=14.5,
     dmnt=7.5, drill=3.2, 
-    crossbars=5)
+    cbars=6,upper=false)
 {
     asz=sz-bsz; // mount position
     mxy=[[0,-asz,htot],[mntx/2,-asz-mnty,ha],[-mntx/2,-asz-mnty,ha]];
     lcrs=asz-dmot/2-dmnt/2-wall; // crossbar length
     p1=[-dmot/2,0]; p2=[-(mntx+dmnt)/2,-asz-mnty]; //curve ref. points
-    rcrs=290; // crossbar curvature radius
-    pc=center2pr(p2,p1,rcrs); // curve center
-    // corssbar end point
-    pE=let(py=-lcrs-dmot/2,d=py-pc.y)[pc.x+sqrt(rcrs*rcrs-d*d),py];
-    // arc start point
-    pS=let(py=-dmot/4,d=py-pc.y)[pc.x+sqrt(rcrs*rcrs-d*d),py];
     // crossbar staring point
     p0=[0,-dmot/2+wall/2];
+    wo=[wall/2,0]; // wall offset for crossbar
+    ri=search_r(lcrs*2,1500,p2+wo,p1+wo,p0,lcrs+wall,cbars);//optimize
+    r0=ri-wall/2; // outer arc radius
+    pc=center2pr(p2,p1,r0); // arc center both for crossbar and outline
+    cb=crossbars(pc,ri,p0,cbars); // crossbar steps
+    // crossbar arc start point
+    pS=let(py=-dmot/4,d=py-pc.y)[pc.x+sqrt(r0*r0-d*d),py];
+    // corssbar arc end point
+    pE=let(py=-lcrs-dmot/2,d=py-pc.y)[pc.x+sqrt(r0*r0-d*d),py];
 
     module rz(a) rotate([0,0,a])children();
     module z(z) translate([0,0,z])children();
@@ -38,14 +42,14 @@ module co_arm(sz=125, bsz=41,
         ofs=nn==0?[0,0]:y/nn*n) c1-ofs;
 
     module drawarc(p1,p2,r,sqr)
-      let(pc=center2pr(p1,p2,rcrs),r1=p1-pc,r2=p2-pc,
+      let(pc=center2pr(p1,p2,r),r1=p1-pc,r2=p2-pc,
           a1=atan2(r1.y, r1.x), a2=atan2(r2.y, r2.x))
         translate(pc)rz(a1)
          rotate_extrude(angle=a2-a1,convexity=4,$fn=340)
           translate([r,0])square(sqr);
 
     // use sideeffect to debug
-    function debugprint(s) = search(s, []);
+    function debugprint(s) = search(s, undef);
     // Viett theorem solver
     function rootof(p,q) = let(ph=p/2, D=ph*ph-q)
         [-ph+sqrt(D),-ph-sqrt(D)];
@@ -55,9 +59,9 @@ module co_arm(sz=125, bsz=41,
         z=rootof(p,q))
         z[1];
     // all crossbars list with intersection with circle
-    function crossbars(pc,r,ps,n=1)=let(x2=c4l_xcross(pc,r,ps),
-        l=x2-ps.x)
-        n==1?[l]:concat(l*2,crossbars(pc,r,ps+[l*2,0],n-1));
+    function crossbars(pc,r,ps,n=1)=let(x2=c4l_xcross(-rot(pc),r,-rot(ps)),
+        l=x2+ps.y)
+        n==1?[l]:concat(l*2,crossbars(pc,r,ps-[0,l*2],n-1));
     // list sum by recurse
     function sumlst(lst,r=0,i=0) = 
         i<len(lst)?sumlst(lst,r+lst[i],i+1):r;
@@ -67,11 +71,10 @@ module co_arm(sz=125, bsz=41,
     // optimize function for circle radiius
     function search_r(rmin,rmax,p1,p2,ps,lopt,n=5,eps=.01) =
         let(lmin=lbars(rmin,p1,p2,ps,n),lmax=lbars(rmax,p1,p2,ps,n),
-            rmid=(rmin+rmax)/2, lmid=lbars(rmid,p1,p2,ps,n),
-            debugprint(str("srch",n)))
+            rmid=(rmin+rmax)/2, lmid=lbars(rmid,p1,p2,ps,n))
         abs(lopt-lmid) < eps ?  rmid :
         let(lower = lopt < lmid)
-          search_r(lower?rmin:rmid,lower?rmid:rmax,p1,p2,ps,lopt);
+          search_r(lower?rmin:rmid,lower?rmid:rmax,p1,p2,ps,lopt,n);
 
     // single crossbar step
     module drawcrossbar(h2,full=true) translate([-h2/2,-h2/2]) {
@@ -100,7 +103,7 @@ module co_arm(sz=125, bsz=41,
         w1=asz+drill/2+pE.y;
         cw=p2-pE;
         // standings
-        for(c=mxy) translate([c.x,c.y,-c.z+ha])
+        for(c=mxy) translate([c.x,c.y,(upper?0:-c.z+ha)])
             cylinder(d=dmnt,h=c.z,$fn=34);
         // horiz bar
         translate(pE-[0,w1])cube([-pE.x*2,w1,ha]);
@@ -123,14 +126,10 @@ module co_arm(sz=125, bsz=41,
     }
     module arm_frame() for(m=[0,1]) mirror([m,0,0])
         {
-//rtst=search_r(50,1500,-rot(p2),-rot(p1),-rot(p0),lcrs,crossbars);
-        rtst=rcrs+wall/2+.45;
-        tpc=center2pr(p2,p1,rtst);
-        crbx=crossbars(-rot(pc),rtst,-rot(p0),crossbars);
-        drawcrossbars(crbx,p0);
+        drawcrossbars(cb,p0);
         // crossbar arc and end bevel
-        ar=let(rd=pS-center2pr(pE,pS,rcrs)) atan2(rd.y,rd.x);
-        drawarc(pE,pS,rcrs,[wall,ha]);
+        ar=let(rd=pS-pc) atan2(rd.y,rd.x);
+        drawarc(pE,pS,r0,[wall,ha]);
         translate(pS)rz(ar)
             z(ha/2)rotate([0,90,0]) cylinder(d=ha,h=wall,$fn=34);
     }
@@ -147,4 +146,4 @@ module co_arm(sz=125, bsz=41,
     arm_frame();
 }
 
-co_arm();
+copter_arm();
