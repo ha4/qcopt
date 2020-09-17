@@ -170,9 +170,14 @@ module drillptrn(x=30.5,xs=36,ds=10,d=3.2,d0=7.5,h1=2,h2=15,pcb=1.5,tol=.2,clamp
     }
 }
 
+/*
+   assembly section
+*/
+
+fsz=250; // frame size
+crossbars=5; // set 5 for 250mm quadframe, 4 for 230mm
+
 module assembly() {
-fsz=227; // frame size
-crossbars=4; // select 6 for 250mm quadframe
 for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) rotate([0,180,0]) translate([0,0,18-6])copter_arm(sz=fsz/2,cbars=crossbars);
     //co_arm();
 translate([0,0,-2.0-18.0])
@@ -188,6 +193,6 @@ for(a=[0:90:359]) rotate([0,0,a+45])translate([0,fsz/2,0]) {
 
 assembly();
 //drillptrn(clamp=false);
-//co_arm2();
+//copter_arm(sz=fsz/2,cbars=crossbars,upper=false);
 //co_bottom();
 //co_center();
