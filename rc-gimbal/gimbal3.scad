@@ -177,6 +177,7 @@ module stickA()
     d3=3;
     asz=25;
     do=27;
+    stkoffs=6;
     module xcylinder(d,h,center) {
         rotate_extrude(convexity=4) translate([d/2-wall,-h/2]) square([wall,h]);
     }
@@ -196,7 +197,7 @@ module stickA()
         f1();
         for(m=[-1,1])rx(m*90)z(25/2-5)cylinder(d=d1,h=6,$fn=13);
         z(-3)cylinder(d=d3,h=5,$fn=23);
-        z(6)cylinder(d=d2,h=do,$fn=19);
+        z(stkoffs)cylinder(d=d2,h=do,$fn=19);
     }
 }
 
@@ -509,18 +510,25 @@ module potnut() color([.5,.5,.5]){
     }
 }
 
+//potcoupler();
 module potcoupler() { // maybe two flat parts
     w=3;
     groove=2;
     gdiam=12+.1;
+    pad=.5;
     difference() {
         hull() {
             cylinder(d=20,h=w,$fn=51); // base
             translate([-6/2,0,0])cube([6,17.5,w]); // base drive
         }
-        cylinder(d=gdiam,h=groove,$fn=53); // plate pin groove
+        z(-.1)cylinder(d=gdiam,h=groove+.1,$fn=53); // plate pin groove
         cylinder(d=7,h=w*3,center=true,$fn=23); // pot hole
         translate([-8,0])cylinder(d=2.9,h=w*3,center=true,$fn=12); // pot ref
+        translate([0,0,w]) intersection() { // 0.5mm pad for potentiometr
+            cube([18,11,2*pad],center=true);
+            cylinder(d=18,h=2*pad,center=true);
+        }
+            
     }
     translate([0,10,-2.5+.01])cylinder(d=3,h=2.5,$fn=30); // drive pin
 }
@@ -632,29 +640,60 @@ module rockerhook() {
     }
 }
 
-module pot() // ###FIXME make a model
+//pot();
+
+module pot(leftside=false) // ###FIXME make a model
 {
+    translate([leftside?-9.5:9.5,-8.25,-9.5/2-3.5])
+        cube([3.5,6.5,9.5],center=true); // connector
+    translate([leftside?-1.5:1.5,-1.6/2-11.5,-10/2-3]) 
+        cube([21,1.6,10],center=true);
+    translate([-15/2,-11.5,-3])cube([15,11.5,1.2]); // pot pcb
+    color([.5,.5,.5]) {
+        z(-9)cylinder(d=17,h=7.2); // housing
+        z(-1.8)cylinder(d=11,h=1.8);// mountbase
+        translate([-17/2+1/2,0,.2])cube([1,2.8,4],center=true);
+        cylinder(d=7,h=7); // thread
+        difference() { // schaft
+            cylinder(d=6,h=17);
+            translate([-6/2,-6/2-4.5,13]) cube(6);
+        }
+    }
 }
 
-module potasm()
+module potasm(leftside=false)
 {
     potplate();
     translate([0,-14.5])ry(180)potnut();
+    translate([0,-14.5])z(-8)pot(leftside);
     translate([0,-14.5,-7+2-.5])rx(180)potcoupler();
     translate([0,-28.5,-2.5])ry(180)rz(90)pottrimmer();
     translate([0,-14.5,3]) rx(90)rockerarm();
     translate([-51/2+8.1,-28.5,3.3])rx(-90) rockerhook();
 }
 
+module stick_rod(l=44)
+{
+    color([.5,.5,.5])cylinder(d=4,h=l);
+    z(l-24)cylinder(d1=5.5,d2=7,h=9);
+    z(l-15)cylinder(d=8,h=11.5);
+    z(l-3.5)cylinder(d=7,h=3.5);
+}
+
+leftgimbal=true;
+mntplate();
+
 z(-14.5)stickA();
 z(-14.5)stickB();
+z(-14.5+6)stick_rod();
 
-z(-14.5)ydrum();
 z(-14.5)xcap();
-
-mntplate();
-translate([-19,-18,-29.5]) spring1();
+rz(180)translate([0,52/2,0]) rx(90) potasm(leftgimbal);
 translate([0,52/2,0]) rx(90)sideplate();
+
+rz(leftgimbal?0:180) {
+z(-14.5)ydrum();
+translate([-19,-18,-29.5]) spring1();
 rz(90)translate([0,52/2,0]) rx(90)sideplate();
-rz(-90)translate([0,52/2,0]) rx(90)potasm();
-//rz(180)translate([0,52/2,0]) rx(90)potasm();
+rz(-90)translate([0,52/2,0]) rx(90)potasm(!leftgimbal);
+}
