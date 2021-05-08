@@ -45,6 +45,7 @@ module bevel() {
             cube([R3*2,Z1f+Z2b+2,deep1-deep3+1]);
         hull() for(y=[0,len3])  // bolt slot
             translate([0,y,-1]) cylinder(d=6,h=deep3+2,$fn=30);
+        for(y=[0:10:30]) translate([0,y+4,deep3]) cube([14,2,4],center=true);
     }
     translate([0,Z2b1+Rb2,Rb2+deep3]) // bevel z #2
         rotate([0,90,0])cylinder(r=Rb2,h=H2+1,center=true,$fn=30);
