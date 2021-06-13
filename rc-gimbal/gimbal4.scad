@@ -23,8 +23,9 @@ mntwidthX=d2oaxise-hub*2;// Xpot axis (output) y-size
 
 dstick=6;  // handle stick diameter
 hstick=10; // handle stick length
-hbase=8;  // 15 base mount height
+hbase=7.7;  // 15 base mount height
 dbase=22; // dmain
+ddrill=9.1667; // 2.4*dmain
 hmbase=15; // main base height with dmain
 
 
@@ -63,11 +64,33 @@ module capxy()
     difference() { cap_lugs(); f0(); }
 }
 
-module drive_arc(do,a=360,scalex=1) let(dx=(scalex-1)*do/2)
-    intersection() {
-    scale([scalex,1])rotate_extrude(angle=a,convexity=4,$fn=81)
+
+module drive_arc(do,a=360,scalex=1) {
+    dx=(scalex-1)*do/2;
+    module f0()
         translate([do/2-wall,-dlug/2]) square([wall,dlug]);
-    hull()for(x=[-dx,dx]) translate([x,0])sphere(d=do,$fn=81);
+    module arc_seg(a1,a2,d) {
+        if (a1==90) translate([0,do/2-wall/2])
+            cube([dx*2+.01,wall,dlug],center=true);
+        if (a1==270) translate([0,-do/2+wall/2])
+            cube([dx*2+.01,wall,dlug],center=true);
+        translate([d,0])rotate([0,0,a1])
+        rotate_extrude(angle=a2-a1,convexity=4,$fn=81)
+            children();
+    }
+    module arc_full(a,astart=0) {
+        let(d=(astart==90 || astart==180)?-dx:dx)
+        if(a-astart > 90) {
+            arc_seg(astart,astart+90,d) children();
+            arc_full(a,astart+90) children();
+        } else
+            arc_seg(astart,a,d) children();
+    }
+    intersection() {
+        arc_full(a) f0();
+        hull()for(x=[-dx,dx]) translate([x,0])
+            sphere(d=do,$fn=81);
+    }
 }
 
 module drivey(pot=false)
@@ -214,8 +237,8 @@ module mntpotstand()
 
 module mntbasedrill()
 {
-    s3=dbase/2.4;
-    d2=2.0-.1;
+    s3=ddrill;
+    d2=2.0-.4; // M2 step 0.4
     for(a=[0:360/4:365]) rotate([0,0,a+360/8])
         translate([s3,0,-hmbase-1])
             cylinder(d=d2,h=2+hmbase-hbase+wall,$fn=21);
