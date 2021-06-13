@@ -1,4 +1,4 @@
-wall=1.5; // main wall thinkness
+wall=1.2; // main wall thinkness
 wall1=0.8; // thin wall thinkness
 gap=0.75; // moving part gap
 tol=0.2; // non-moving part setup tolerance
@@ -9,14 +9,14 @@ dmain=38; // 38 general outer cap size
 dlug=9; // moving lug diameter
 axis=1.5; // axis shaft diameter
 d3axis=1.5; // 3mm service axis
-hub=2.6; // 2*wall potetiometer hub size
+hub=2.7; // 2*wall potetiometer hub size
 
-axismain=dmain-2*wall-1.4; // 1.5 main cap inter lug size
-d1axis=axismain-2*wall-1.4;  // Yaxis arm outer (sweep X)
+axismain=dmain-2*wall-1.6; // 1.5 main cap inter lug size
+d1axis=axismain-2*wall-1.6;  // Yaxis arm outer (sweep X)
 d2axis=axismain-.5; // Xservice arm outer
 z3axis=d2axis-3*wall; // Xservice upper axis
-d2oaxis=axismain-8.6+(ELIPSO?2.8:0); // Xaxis-pot
-d2oaxise=d2oaxis+(ELIPSO?1.4:0);
+d2oaxis=axismain-8.6+(ELIPSO?3.0:0); // Xaxis-pot
+d2oaxise=d2oaxis+(ELIPSO?1.6:0);
 
 mntwidthY=d1axis-hub*2; // Ypot axis (output) x-size
 mntwidthX=d2oaxise-hub*2;// Xpot axis (output) y-size
@@ -63,10 +63,11 @@ module capxy()
     difference() { cap_lugs(); f0(); }
 }
 
-module drive_arc(do,a=360) intersection() {
-    rotate_extrude(angle=a,convexity=4,$fn=81)
+module drive_arc(do,a=360,scalex=1) let(dx=(scalex-1)*do/2)
+    intersection() {
+    scale([scalex,1])rotate_extrude(angle=a,convexity=4,$fn=81)
         translate([do/2-wall,-dlug/2]) square([wall,dlug]);
-    sphere(d=do,$fn=81);
+    hull()for(x=[-dx,dx]) translate([x,0])sphere(d=do,$fn=81);
 }
 
 module drivey(pot=false)
@@ -84,7 +85,7 @@ module drivey(pot=false)
     module inner_xlug() for(r=[0,180]) rz(r) rx(90)
         z(mntwidthY/2) cylinder(d=dlug, h=hub-wall+.1, $fn=23);
 
-    difference() { scale([s,1])drive_arc(d1axis); f0(); }
+    difference() { drive_arc(d1axis,360,s); f0(); }
     difference() { outer_lug(); f0(); }
     difference() { inner_xlug(); f0(); }
 }
@@ -128,7 +129,7 @@ module drivex(pot=false)
         ry(180) z(-(z3axis-tol)/2)
             cylinder(d1=dlug/2,d2=dlug,h=hZ+wall/2); // driver
     }
-    difference() { scale([s,1])rx(90)drive_arc(d2oaxis,180); f0(); f3(); }
+    difference() { rx(90)drive_arc(d2oaxis,180,s); f0(); f3(); }
     difference() { upper_lug(); f3(); }
     difference() { inner_ylug(); f0(); }
 }
@@ -165,16 +166,26 @@ module mntpotdrill()
 module mntpotlock()
 {
     potw=10.2;
+    potz=6;
     l=18;
     w=4+wall1;
     x=3;
     z=5.6;
     w2=potw-2+wall1;
-    hull() {
-        translate([x,-potw/2,z]) cube([w,potw,wall1]);
+    lsz=4-tol/2; lszz=2; // corner lock
+    hull() { // upper tapeziod
+        translate([x,-potw/2-tol/2,z]) cube([w,potw+tol,wall1]);
         translate([x+w-wall1,-l/2,z]) cube([wall1,l,wall1]);
     }
-    translate([x+w-wall1,-w2/2,z-wall1*2]) cube([wall1,w2,wall1*3]);
+    translate([x+w-wall1,-w2/2,z-wall1*2]) // back lock
+        cube([wall1,w2,wall1*3]);
+    for(j=[0,1])mirror([0,j])
+    translate([x+w-wall1-lsz-tol/2,potw/2+tol/2,z-lszz])
+    intersection() { // corner lock
+            cube([lsz,lsz,lszz+wall1]);
+            translate([lsz,0])
+            cylinder(r=lsz,h=lszz+wall1,$fn=30);
+    }
 }
 
 module mntpotstand()
@@ -204,7 +215,7 @@ module mntpotstand()
 module mntbasedrill()
 {
     s3=dbase/2.4;
-    d2=2.0;
+    d2=2.0-.1;
     for(a=[0:360/4:365]) rotate([0,0,a+360/8])
         translate([s3,0,-hmbase-1])
             cylinder(d=d2,h=2+hmbase-hbase+wall,$fn=21);
@@ -216,16 +227,24 @@ module mntbasesup()
     s1=dbase/4;
     s3=dbase/2.5;
     d4=4;
+    difference() {
     for(a=[0:360/4:365]) rotate([0,0,a+360/8]) {
-    hull() {
-        translate([s0/2,0,-hbase+wall/2])
-        cube([s0,wall,wall],center=true);
-        translate([s1/2,0,-hmbase+wall/2])
-        cube([s1,wall,wall],center=true);
+        hull() {
+            translate([s0/2,0,-hbase-wall/2])
+                cube([s0,wall,wall],center=true);
+            translate([s1/2,0,-hmbase+wall/2])
+                cube([s1,wall,wall],center=true);
+        }
+        translate([s3,0,-hmbase])
+            cylinder(d=d4,h=hmbase-hbase,$fn=39);
     }
-    translate([s3,0,-hmbase])
-        cylinder(d=d4,h=hmbase-hbase+.1,$fn=39);
+    mntbasedrill();
     }   
+    
+    difference() {
+        z(-hmbase+wall/2) cylinder(d=dmain,h=wall,center=true);
+        mntbasedrill();
+    }
 }
 
 module mntbase0()
@@ -241,18 +260,24 @@ module mntbase0()
         rz(180)translate([-(mntwidthX-tol)/2,0]) mntstand();
     }
     difference() { f2(); f0(); }
-    z(-hbase) cylinder(d=dbase,h=wall);
-    z(-hmbase+wall/2) cylinder(d=dmain,h=wall,center=true);
-    mntbasesup();
+    difference() { 
+        z(-hbase) cylinder(d=dbase,h=wall);
+        mntbasedrill();
+    }
 }
 
 module potlocks()
-{
-    // Ypot lock
-    rz(90)translate([-(mntwidthY-tol)/2,0]) mntpotlock();
-    // Xpot lock
-    translate([-(mntwidthX-tol)/2,0]) mntpotlock();
-}
+    difference() {
+        union() {
+            // Ypot lock
+            rz(90)translate([-(mntwidthY-tol)/2,0])
+                mntpotlock();
+            // Xpot lock
+            translate([-(mntwidthX-tol)/2,0])
+                mntpotlock();
+        }
+        z(hmbase) mntbasedrill();
+    }
 
 module mntbase()
 {
@@ -275,11 +300,8 @@ module mntbase()
         rz(180)translate([-(mntwidthX-tol)/2,0]) mntstand();
         translate([-(mntwidthX-tol)/2,0]) mntpotstand();
         z(-hbase+wall/2) cylinder(d=dbase,h=wall,center=true);
-        mntbasesup();
-        z(-hmbase+wall/2) cylinder(d=dmain,h=wall,center=true);
     }
     difference() { f2(); f0(); mntbasedrill(); } 
-    #potlocks();
 }
 
 module rotary6(tol=0,hh=6.5) let(flatspot=1.5)
@@ -316,6 +338,7 @@ drivey();
 drivex_svc();
 drivex();
 mntbase0();
+//mntbasesup();
 }
 
 module assembly()
@@ -325,14 +348,25 @@ rot2=0;
 //ry(rot1)rx(rot2)
 //capxy();
 //ry(rot1)
-//drivey(true);
+drivey(true);
 //rx(rot2) ry(rot1/2)
-//    drivex_svc();
+    drivex_svc();
 //rx(rot2)
-//drivex(true);
+drivex(true);
 mntbase();
+mntbasesup();
+potlocks();
 rx(90)       z(mntwidthY/2-wall1-tol)rv09(-rot1);
 rz(-90)rx(90)z(mntwidthX/2-wall1-tol)rv09(rot2);
+}
+
+module print() {
+translate([-35,0])z(hbase)mntbase();
+translate([0,5])z(hmbase) mntbasesup();
+translate([-30,30])rz(90)rx(180)z(-wall1-5.6)potlocks();
+translate([-30,30])z(dlug/2)drivey(true);
+translate([5,40])z(dlug/2)rx(90)drivex(true);
+translate([10,35])z(dlug/2)rz(45)ry(90)drivex_svc();
 }
 
 module dexpmnt()
@@ -349,5 +383,6 @@ module dexpmnt()
 
 //assembly0();
 assembly();
+//print();
 
 //#z(3) dexpmnt();
