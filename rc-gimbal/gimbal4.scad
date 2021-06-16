@@ -157,24 +157,27 @@ module drivex(pot=false)
     difference() { inner_ylug(); f0(); }
 }
 
+module supportdiag(xyz)
+{
+    th=0.05;
+    for(t=[0,xyz.y-wall]) hull(){
+        translate([-th,t,0])cube([th,wall,xyz.z]);
+        translate([0,t,-th])cube([xyz.x,wall,th]);
+    }
+}
+
 module mntstand()
 {
     poth=6.5; // pot bottom to axis size
     dis=wall*2-wall;
     dl=dlug;
-    module f1a() // vertical element
-        z(-hbase)cube([wall,wall,hbase]);
-    module f1b() // laydown element
-        z(-hbase)cube([dl/1.5,wall,wall]);
-    // stand support
-    for(j=[0,1])mirror([0,j])
-    translate([wall,-dl/2])hull(){f1a(); f1b();}
-    // stand wall
-    hull() { translate([wall,-dl/2])f1a();
-    translate([wall,dl/2-wall])f1a(); }
+
+    translate([wall,-dl/2,-hbase])cube([wall,dl,hbase]);
+    translate([wall*2,-dl/2,-hbase+wall])
+        supportdiag([dl/1.5-wall,dl,hbase-wall]);
     // stand pivot center
-    ry(90)cylinder(d2=dl,d1=dl-2*wall,h=wall,$fn=36);
-    ry(90)z(wall-.01)cylinder(d=dl,h=wall+.01,$fn=36);
+    ry(90)cylinder(d1=dlug-2*wall,d2=dlug,h=wall+.01,$fn=36);
+    ry(90)z(wall)cylinder(d=dlug,h=wall,$fn=36);
 }
 
 module mntpotdrill()
@@ -220,18 +223,21 @@ module mntpotstand()
     
     h1=potw-2;
     w1=wall1+wall+potz;
+    hb=h1-2*wall+.1;
+    sup=2.45;
     module bottom()
         translate([0,-h1/2,-poth-wall])
-        cube([w1,h1,wall]);
+        cube([w1+sup,h1,wall]);
     module back()
-        translate([wall1+potz,-(h1-2*wall+.1)/2,-poth-wall])
-        cube([wall,h1-2*wall+.1,wall+poth]);
+        translate([wall1+potz,-hb/2,-poth-.1])
+            cube([wall,hb,poth+.1]);
     module front()
         translate([0,-h1/2,-poth-wall])
             cube([wall1,h1,poth+wall]);
 
     bottom();
     back();
+    translate([w1,-hb/2,-poth]) supportdiag([sup,hb,poth]);
     front();
 }
 
